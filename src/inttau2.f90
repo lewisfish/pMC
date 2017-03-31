@@ -35,7 +35,7 @@ CONTAINS
         dir = (/.FALSE., .FALSE., .FALSE./)
 
         tau = -log(ran2(iseed))
-
+        print*,
         do
             dir = (/.FALSE., .FALSE., .FALSE./)
             dcell = wall_dist(celli, cellj, cellk, xcur, ycur, zcur, dir)
