@@ -10,7 +10,6 @@ use opt_prop
 
 !subroutines
 use subs
-!use reader_mod
 use gridset_mod
 use sourceph_mod
 use inttau2

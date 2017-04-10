@@ -8,7 +8,7 @@ CONTAINS
     !optical depth integration subroutine
     !
     !
-        use constants,   only : nxg, nyg, nzg, twopi
+        use constants,   only : nxg, nyg, nzg, twopi, pi
         use photon_vars, only : xp, yp, zp, nxp, nyp, nzp, cost, sint, cosp, sinp, phi, phase
         use iarray,      only : jmean, rhokap, intensity
    
@@ -18,7 +18,7 @@ CONTAINS
         integer, intent(INOUT) :: xcell, ycell, zcell, iseed
         logical, intent(INOUT) :: tflag
 
-        real                   :: tau, taurun, taucell, xcur, ycur, zcur, d, dcell, ran2
+        real                   :: tau, taurun, taucell, xcur, ycur, zcur, d, dcell, ran2, r_pos, wavelength
         integer                :: celli, cellj, cellk
         logical                :: dir(3), rflag
 
@@ -35,7 +35,7 @@ CONTAINS
         dir = (/.FALSE., .FALSE., .FALSE./)
 
         tau = -log(ran2(iseed))
-        print*,
+wavelength = 1435.e-9
         do
             dir = (/.FALSE., .FALSE., .FALSE./)
             dcell = wall_dist(celli, cellj, cellk, xcur, ycur, zcur, dir)
@@ -46,7 +46,7 @@ CONTAINS
                 d = d + dcell
                 jmean(celli, cellj, cellk) = jmean(celli, cellj, cellk) + dcell
                 phase = (twopi* d)/ 1435.e-9
-                intensity(celli,cellj, cellk) = intensity(celli, cellj,cellk) + cos(phase)
+                intensity(celli,cellj, cellk) = intensity(celli, cellj,cellk) + cos(phase -twopi*r_pos/wavelength * sin(5.*pi/180.))
                 call update_pos(xcur, ycur, zcur, celli, cellj, cellk, dcell, .TRUE., dir, delta)
 
             else
@@ -54,8 +54,9 @@ CONTAINS
                 dcell = (tau - taurun) / rhokap(celli,cellj,cellk)
                 d = d + dcell
                 jmean(celli, cellj, cellk) = jmean(celli, cellj, cellk) + dcell
-                phase = twopi * d/ 1435.e-9
-                intensity(celli,cellj, cellk) = intensity(celli, cellj,cellk) + cos(phase)
+                phase = (twopi * d)/ 1435.e-9
+                r_pos = sqrt((xcur-xmax)**2.+(ycur-ymax)**2.)
+                intensity(celli,cellj, cellk) = intensity(celli, cellj,cellk) + cos(phase -twopi*r_pos/wavelength * sin(5.*pi/180.))
                 call update_pos(xcur, ycur, zcur, celli, cellj, cellk, dcell, .FALSE., dir, delta)
                 exit
             end if
