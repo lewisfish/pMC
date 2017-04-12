@@ -19,9 +19,10 @@ CONTAINS
         integer, intent(INOUT) :: xcell, ycell, zcell, iseed
         logical, intent(INOUT) :: tflag
 
-        real                   :: tau, taurun, taucell, xcur, ycur, zcur, d, dcell, ran2, r_pos
+        real                   :: tau, taurun, taucell, xcur, ycur, zcur, d, dcell, ran2, r_pos, a, b
         integer                :: celli, cellj, cellk
         logical                :: dir(3), rflag
+        complex :: tmp
 
         xcur = xp + xmax
         ycur = yp + ymax
@@ -46,9 +47,12 @@ CONTAINS
                 d = d + dcell
                 jmean(celli, cellj, cellk) = jmean(celli, cellj, cellk) + dcell
                 
-                ! r_pos = sqrt((xcur-xmax)**2.+(ycur-ymax)**2.)
-                phase = ((twopi* d)/ wavelength) !-(twopi*r_pos/wavelength * sin(5.*pi/180.))
-                intensity(celli,cellj, cellk) = intensity(celli, cellj,cellk) + cos(phase)
+                r_pos = sqrt((xcur-xmax)**2.+(ycur-ymax)**2.)
+                phase = ((twopi* d)/ wavelength) -(twopi*r_pos/wavelength * sin(5.*pi/180.))
+                a = cos(phase)
+                b = sin(phase)
+                tmp = a+b!cmplx(a, b)
+                intensity(celli,cellj, cellk) = intensity(celli, cellj,cellk) + (tmp)
                 
                 call update_pos(xcur, ycur, zcur, celli, cellj, cellk, dcell, .TRUE., dir, delta)
             else
@@ -57,9 +61,12 @@ CONTAINS
                 d = d + dcell
                 jmean(celli, cellj, cellk) = jmean(celli, cellj, cellk) + dcell
                 
-                ! r_pos = sqrt((xcur-xmax)**2.+(ycur-ymax)**2.)
-                phase = ((twopi* d)/ wavelength) !-(twopi*r_pos/wavelength * sin(angle*pi/180.))
-                intensity(celli,cellj, cellk) = intensity(celli, cellj,cellk) + cos(phase)
+                r_pos = sqrt((xcur-xmax)**2.+(ycur-ymax)**2.)
+                phase = ((twopi* d)/ wavelength) -(twopi*r_pos/wavelength * sin(angle*pi/180.))
+                a = cos(phase)
+                b = sin(phase)
+                tmp = a+b!cmplx(a, b)
+                intensity(celli,cellj, cellk) = intensity(celli, cellj,cellk) + (tmp)
                 
                 call update_pos(xcur, ycur, zcur, celli, cellj, cellk, dcell, .FALSE., dir, delta)
                 exit
