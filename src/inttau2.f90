@@ -46,7 +46,7 @@ wavelength = 1435.e-9
                 d = d + dcell
                 jmean(celli, cellj, cellk) = jmean(celli, cellj, cellk) + dcell
                 phase = (twopi* d)/ 1435.e-9
-                intensity(celli,cellj, cellk) = intensity(celli, cellj,cellk) + cos(phase -twopi*r_pos/wavelength * sin(5.*pi/180.))
+                intensity(celli,cellj, cellk) = intensity(celli, cellj,cellk) + cos(phase)!cos(phase -twopi*r_pos/wavelength * sin(5.*pi/180.))
                 call update_pos(xcur, ycur, zcur, celli, cellj, cellk, dcell, .TRUE., dir, delta)
 
             else
@@ -56,7 +56,7 @@ wavelength = 1435.e-9
                 jmean(celli, cellj, cellk) = jmean(celli, cellj, cellk) + dcell
                 phase = (twopi * d)/ 1435.e-9
                 r_pos = sqrt((xcur-xmax)**2.+(ycur-ymax)**2.)
-                intensity(celli,cellj, cellk) = intensity(celli, cellj,cellk) + cos(phase -twopi*r_pos/wavelength * sin(5.*pi/180.))
+                intensity(celli,cellj, cellk) = intensity(celli, cellj,cellk) + cos(phase)!cos(phase -twopi*r_pos/wavelength * sin(5.*pi/180.))
                 call update_pos(xcur, ycur, zcur, celli, cellj, cellk, dcell, .FALSE., dir, delta)
                 exit
             end if

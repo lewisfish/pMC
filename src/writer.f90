@@ -32,7 +32,7 @@ CONTAINS
 
    open(newunit=u,file='slice.dat',status='REPLACE')
    do i = 1,  nxg
-    write(u,*)intensityGLOBAL(i,:,125)
+    write(u,*)intensityGLOBAL(i,125,200)
 end do
    end subroutine writer
 end MODULE writer_mod
