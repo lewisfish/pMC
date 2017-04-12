@@ -68,8 +68,8 @@ CONTAINS
 
    hgg = 0.91
    g2  = hgg**2.
-   mua = 26.4
-   mus = 13.55 / (1. - hgg)
+   mua = 26.4d0
+   mus = 13.55d0 / (1. - hgg)
 
    kappa  = mus + mua 
    albedo = mus / kappa

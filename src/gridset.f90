@@ -39,8 +39,21 @@ CONTAINS
             x = xface(i)-xmax+xmax/nxg
             y = yface(j)-ymax+ymax/nyg
             z = zface(k)-zmax+zmax/nzg
-!***********Call density setup subroutine 
-               rhokap(i,j,k)=kappa
+!***********Call density setup subroutine
+            
+               if(i >= 95 .and. i<= 105)then
+                  if(j >= 95 .and. j<= 105)then
+                     if(k >= 150 .and. k<= 160)then
+                        rhokap(i,j,k)=1000.*kappa
+                     else
+                        rhokap(i,j,k)=kappa
+                     end if
+                  else
+                     rhokap(i,j,k)=kappa
+                  end if
+               else
+                  rhokap(i,j,k)=kappa
+               end if
          end do
       end do
    end do

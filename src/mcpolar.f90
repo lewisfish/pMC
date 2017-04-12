@@ -56,6 +56,8 @@ iseed=-95648324+id
 iseed=-abs(iseed)  ! Random number seed must be negative for ran2
 
 call init_opt4
+wavelength = 1435.0e-9
+
 
 if(id == 0)then
    print*, ''      
@@ -99,9 +101,9 @@ do j=1,nphotons
       ran = ran2(iseed)
       
       if(ran < albedo)then!interacts with tissue
-            continue
-            ! call stokes(iseed)
-            ! nscatt = nscatt + 1        
+            ! continue
+            call stokes(iseed)
+            nscatt = nscatt + 1        
          else
             tflag=.true.
             exit
@@ -132,6 +134,9 @@ call MPI_BARRIER(MPI_COMM_WORLD, error)
 call MPI_REDUCE(nscatt,nscattGLOBAL,1,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,error)
 call MPI_BARRIER(MPI_COMM_WORLD, error)
 
+
+deallocate(jmean,intensity,xface,yface,zface,rhokap)
+call MPI_BARRIER(MPI_COMM_WORLD, error)
 
 if(id == 0)then
    print*,'Average # of scatters per photon:',nscattGLOBAL/(nphotons*numproc)

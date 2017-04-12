@@ -9,7 +9,7 @@ MODULE constants
 implicit none
 save
 
-integer, parameter :: nxg=250, nyg=250, nzg=250
+integer, parameter :: nxg=200, nyg=200, nzg=200
 real,    parameter :: PI = 3.141592, TWOPI = 6.283185
 character(len=255) :: cwd, homedir, fileplace, resdir
 

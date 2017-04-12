@@ -18,14 +18,14 @@ CONTAINS
 
    inquire(iolength=i)jmeanGLOBAL
 
-   open(newunit=u,file=trim(fileplace)//'jmean/jmean.dat',access='direct',status='REPLACE',form='unformatted',&
+   open(newunit=u,file=trim(fileplace)//'jmean/2point-jmean.dat',access='direct',status='REPLACE',form='unformatted',&
    recl=i)
    write(u,rec=1) jmeanGLOBAL
    close(u)
 
   inquire(iolength=i)intensityGLOBAL
 
-   open(newunit=u,file=trim(fileplace)//'jmean/int.dat',access='direct',status='REPLACE',form='unformatted',&
+   open(newunit=u,file=trim(fileplace)//'jmean/2point-int.dat',access='direct',status='REPLACE',form='unformatted',&
    recl=i)
    write(u,rec=1) intensityGLOBAL
    close(u)
