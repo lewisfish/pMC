@@ -8,9 +8,9 @@ CONTAINS
     !optical depth integration subroutine
     !
     !
-        use constants,   only : nxg, nyg, nzg, twopi, pi
-        use photon_vars, only : xp, yp, zp, nxp, nyp, nzp, cost, sint, cosp, sinp, phi, phase, angle
-        use iarray,      only : jmean, rhokap, intensity
+        use constants,   only : twopi, pi
+        use photon_vars, only : xp, yp, zp, phase, angle
+        use iarray,      only : jmean, rhokap, intensity, phasor
         use opt_prop,    only : wavelength
    
         implicit none
@@ -21,7 +21,7 @@ CONTAINS
 
         real                   :: tau, taurun, taucell, xcur, ycur, zcur, d, dcell, ran2, r_pos, a, b
         integer                :: celli, cellj, cellk
-        logical                :: dir(3), rflag
+        logical                :: dir(3)
         complex :: tmp
 
         xcur = xp + xmax
@@ -51,8 +51,10 @@ CONTAINS
                 phase = ((twopi* d)/ wavelength) -(twopi*r_pos/wavelength * sin(5.*pi/180.))
                 a = cos(phase)
                 b = sin(phase)
-                tmp = a+b!cmplx(a, b)
-                intensity(celli,cellj, cellk) = intensity(celli, cellj,cellk) + (tmp)
+                tmp = cmplx(a, b)
+
+                phasor(celli,cellj, cellk) = phasor(celli, cellj,cellk) + a
+                intensity(celli,cellj, cellk) = intensity(celli, cellj,cellk) + abs(tmp)**2
                 
                 call update_pos(xcur, ycur, zcur, celli, cellj, cellk, dcell, .TRUE., dir, delta)
             else
@@ -65,13 +67,14 @@ CONTAINS
                 phase = ((twopi* d)/ wavelength) -(twopi*r_pos/wavelength * sin(angle*pi/180.))
                 a = cos(phase)
                 b = sin(phase)
-                tmp = a+b!cmplx(a, b)
-                intensity(celli,cellj, cellk) = intensity(celli, cellj,cellk) + (tmp)
+                tmp = cmplx(a, b)
+
+                phasor(celli,cellj, cellk) = phasor(celli, cellj,cellk) + a
+                intensity(celli,cellj, cellk) = intensity(celli, cellj,cellk) + abs(tmp)**2
                 
                 call update_pos(xcur, ycur, zcur, celli, cellj, cellk, dcell, .FALSE., dir, delta)
                 exit
             end if
-         !cos(phase -twopi*r_pos/wavelength * sin(5.*pi/180.))
             if(celli == -1 .or. cellj == -1 .or. cellk == -1)then
                 tflag = .true.
                 exit

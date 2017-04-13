@@ -20,12 +20,25 @@ CONTAINS
 
    zp = zmax - (1.e-5*(2.*zmax/nzg))
    xp = 0.
-
-   w = 0.000025
-   r1 = w * sqrt(-log(ran2(iseed)))
+12 continue
+   w = 0.000035
+   r1 = w*sqrt(-2.*log(ran2(iseed)))
    phigauss = twopi * ran2(iseed)
    xp = r1 * cos(phigauss)
    yp = r1 * sin(phigauss)
+if(xp**2 + yp**2 > xmax**2.)goto 12
+
+   ! print*,xp,yp
+
+   ! do
+   !    v1 = 2. * ran2(iseed) - 1.
+   !    v2 = 2. * ran2(iseed) - 1.
+   !    s = v1**2 + v2 **2
+   !    if(s <= 1. .and. s > 0.)exit
+   ! end do
+
+
+
 
    ! if(ran2(iseed) < 0.5)then
    !    ycell = 50
