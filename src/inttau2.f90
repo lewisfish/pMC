@@ -48,7 +48,7 @@ CONTAINS
                 jmean(celli, cellj, cellk) = jmean(celli, cellj, cellk) + dcell
                 
                 r_pos = sqrt((xcur-xmax)**2.+(ycur-ymax)**2.)
-                phase = ((twopi* d)/ wavelength) -(twopi*r_pos/wavelength * sin(5.*pi/180.))
+                phase = ((twopi* d)/ wavelength) -(twopi*r_pos/wavelength * sin(angle*pi/180.))
                 a = cos(phase)
                 b = sin(phase)
                 tmp = cmplx(a, b)
