@@ -102,8 +102,8 @@ do j=1,nphotons
       
       if(ran < albedo)then!interacts with tissue
             ! continue
-            call stokes(iseed)
-            nscatt = nscatt + 1        
+            ! call stokes(iseed)
+            ! nscatt = nscatt + 1        
          else
             tflag=.true.
             exit
