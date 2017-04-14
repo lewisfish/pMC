@@ -2,6 +2,6 @@
 phase Monte Carlo radiation transport
 
 
-MCRT code to track phase of photons. With the aim of modelling a bessel beam for scientific project.
+MCRT code to track phase of photons. 
+Can model Bessel beams, interferances between point sources and other wave like behaviour of photons.
 
-Currently just tracks phase. Has 2 point sources and creates an unnormalised intensity ouput int.dat
