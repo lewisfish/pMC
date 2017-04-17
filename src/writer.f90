@@ -3,36 +3,113 @@ MODULE writer_mod
 implicit none
 save
 
-CONTAINS
-    subroutine writer(xmax,ymax,zmax,nphotons, numproc)
+private
+public :: writer
 
-        use constants, only : nxg,nyg,nzg,fileplace
-        use iarray,    only : jmeanGLOBAL, intensityGLOBAL, phasorGLOBAL
+interface write_binary
+    module procedure write_binaryR3
+    module procedure write_binaryR4
+    module procedure write_binaryI3
+end interface
+
+CONTAINS
+    subroutine writer(nphotons, numproc)
+
+        use constants, only : nxg, nyg, nzg, xmax, ymax, zmax, beam
+        use iarray,    only : jmeanGLOBAL, intensityGLOBAL, phasorGLOBAL,rhokap
+        use opt_prop,  only : mua
 
         implicit none
 
-        integer :: nphotons, i, u, numproc
-        real    :: xmax, ymax, zmax
+        integer, intent(IN) :: nphotons, numproc
+        integer :: i, u
+        real :: tmp(nxg,nyg,nzg)
+        character(len=256) :: filename
 
-        jmeanGLOBAL =jmeanGLOBAL * ((2.*xmax)**2./(nphotons*numproc*(2.*xmax/nxg)*(2.*ymax/nyg)*(2.*zmax/nzg)))
+        jmeanGLOBAL = jmeanGLOBAL * ((2.*xmax)**2./(nphotons*numproc*(2.*xmax/nxg)*(2.*ymax/nyg)*(2.*zmax/nzg)))
 
-        inquire(iolength=i)jmeanGLOBAL
-        open(newunit=u,file=trim(fileplace)//'jmean/2point-jmean.dat',access='direct',status='REPLACE',form='unformatted',&
-        recl=i)
-        write(u,rec=1) jmeanGLOBAL
-        close(u)
+        print*,
 
-        inquire(iolength=i)intensityGLOBAL
-        open(newunit=u,file=trim(fileplace)//'jmean/intensity.dat',access='direct',status='REPLACE',form='unformatted',&
-        recl=i)
-        write(u,rec=1) intensityGLOBAL
-        close(u)
+        print*,'Written to:'
+        filename = 'jmean/'//trim(beam)//'1-jmean.dat'
+        print*,trim(filename)
+        call write_binary(trim(filename), jmeanGLOBAL)
 
-        inquire(iolength=i)phasorGLOBAL
-        open(newunit=u,file=trim(fileplace)//'jmean/phase.dat',access='direct',status='REPLACE',form='unformatted',&
-        recl=i)
-        write(u,rec=1) phasorGLOBAL
-        close(u)
+
+        filename = 'jmean/'//trim(beam)//'1-phase.dat'
+        print*,trim(filename)
+        call write_binary(trim(filename), phasorGLOBAL)
+
+
+        filename = 'jmean/'//trim(beam)//'1-intesity.dat'
+        print*,trim(filename)
+        call write_binary(trim(filename), intensityGLOBAL)
+
+        filename = 'jmean/'//trim(beam)//'1-absenergy.dat'
+        print*,trim(filename)
+        tmp = jmeanGLOBAL*mua
+        call write_binary(trim(filename), tmp)
 
     end subroutine writer
+
+
+    subroutine write_binaryR3(filename, array)
+
+        use constants, only : fileplace
+
+        implicit none
+
+        character(len=*), intent(IN) :: filename
+        real,             intent(IN) :: array(:,:,:)
+        
+        integer :: u, i
+
+        inquire(iolength=i)array
+        open(newunit=u,file=trim(fileplace)//trim(filename),access='direct',status='REPLACE',form='unformatted',&
+        recl=i)
+        write(u,rec=1) array
+        close(u)
+
+    end subroutine write_binaryR3
+
+
+    subroutine write_binaryR4(filename, array)
+
+        use constants, only : fileplace
+
+        implicit none
+
+        character(len=*), intent(IN) :: filename
+        real,             intent(IN) :: array(:,:,:,:)
+        
+        integer :: u, i
+
+        inquire(iolength=i)array
+        open(newunit=u,file=trim(fileplace)//trim(filename),access='direct',status='REPLACE',form='unformatted',&
+        recl=i)
+        write(u,rec=1) array
+        close(u)
+
+    end subroutine write_binaryR4
+
+
+    subroutine write_binaryI3(filename, array)
+
+        use constants, only : fileplace
+
+        implicit none
+
+        character(len=*), intent(IN) :: filename
+        integer,          intent(IN) :: array(:,:,:)
+        
+        integer :: u, i
+
+        inquire(iolength=i)array
+        open(newunit=u,file=trim(fileplace)//trim(filename),access='direct',status='REPLACE',form='unformatted',&
+        recl=i)
+        write(u,rec=1) array
+        close(u)
+
+    end subroutine write_binaryI3
+
 end MODULE writer_mod

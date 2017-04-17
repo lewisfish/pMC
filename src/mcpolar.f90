@@ -19,13 +19,14 @@ use writer_mod
 
 implicit none
 
-integer nphotons,iseed,j,xcell,ycell,zcell
-logical tflag
-DOUBLE PRECISION nscatt
-real :: xmax,ymax,zmax, ran, delta, start,finish,ran2
+integer             :: nphotons, iseed, j, xcell, ycell, zcell
+logical             :: tflag
+double precision    :: nscatt
+real                :: ran, delta, start, finish, ran2
 
+!mpi variables
 integer :: id, error, numproc
-real :: nscattGLOBAL
+real    :: nscattGLOBAL
 
 !set directory paths
 call directory
@@ -49,14 +50,15 @@ open(10,file=trim(resdir)//'input.params',status='old')
    read(10,*) zmax
    read(10,*) n1
    read(10,*) n2
+   read(10,*) beam
    close(10)
 
 ! set seed for rnd generator. id to change seed for each process
-iseed=-95648324+id
-iseed=-abs(iseed)  ! Random number seed must be negative for ran2
+iseed = -95648324 + id
+iseed = -abs(iseed)  ! Random number seed must be negative for ran2
 
 call init_opt4
-wavelength = 1435.0e-9
+wavelength = 785.0e-9
 
 
 if(id == 0)then
@@ -65,7 +67,7 @@ if(id == 0)then
 end if
 
 !***** Set up density grid *******************************************
-call gridset(xmax,ymax,zmax,id)
+call gridset(id)
 
 !***** Set small distance for use in optical depth integration routines 
 !***** for roundoff effects when crossing cell walls
@@ -90,20 +92,19 @@ do j=1,nphotons
    end if
     
 !***** Release photon from point source *******************************
-   call sourceph(xmax,ymax,zmax,xcell,ycell,zcell,iseed)
+   call sourceph(xcell,ycell,zcell,iseed)
 
 !****** Find scattering location
 
-      call tauint1(xmax,ymax,zmax,xcell,ycell,zcell,tflag,iseed,delta)
+      call tauint1(xcell,ycell,zcell,tflag,iseed,delta)
             
 !******** Photon scatters in grid until it exits (tflag=TRUE) 
    do while(tflag.eqv..FALSE.)
       ran = ran2(iseed)
       
       if(ran < albedo)then!interacts with tissue
-            ! continue
-            ! call stokes(iseed)
-            ! nscatt = nscatt + 1        
+            call stokes(iseed)
+            nscatt = nscatt + 1        
          else
             tflag=.true.
             exit
@@ -111,7 +112,7 @@ do j=1,nphotons
 
 !************ Find next scattering location
 
-       call tauint1(xmax,ymax,zmax,xcell,ycell,zcell,tflag,iseed,delta)
+       call tauint1(xcell,ycell,zcell,tflag,iseed,delta)
        
    end do
 end do      ! end loop over nph photons
@@ -145,7 +146,7 @@ if(id == 0)then
    print*,'Average # of scatters per photon:',nscattGLOBAL/(nphotons*numproc)
    !write out files
 
-   call writer(xmax,ymax,zmax,nphotons, numproc)
+   call writer(nphotons, numproc)
    print*,'write done'
 end if
 

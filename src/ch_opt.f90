@@ -42,7 +42,7 @@ CONTAINS
    
    subroutine init_opt3
 !
-!  subroutine to set tissue optical properties 1064nm
+!  subroutine to set tissue optical properties 758nm
 !
    use opt_prop
 
@@ -50,10 +50,10 @@ CONTAINS
 
    hgg = 0.9
    g2  = hgg**2.
-   mua = .13
-   mus = 9.49 / (1. - hgg) !from s.jacques paper formula using jacques 1996 data
+   mua = 0.4d0
+   mus = 174.6d0
 
-   kappa  = mus + mua !+ 5.3e-3
+   kappa  = mus + mua
    albedo = mus / kappa
 
    end subroutine init_opt3

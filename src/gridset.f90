@@ -4,18 +4,19 @@ implicit none
 save
 
 CONTAINS
-   subroutine gridset(xmax,ymax,zmax,id)
+   subroutine gridset(id)
 
    use density_mod
-   use constants, only : nxg, nyg, nzg
+   use constants, only : nxg, nyg, nzg, xmax, ymax, zmax
    use iarray,    only : rhokap, xface, yface, zface
    use opt_prop,  only : kappa
    use ch_opt
 
    implicit none
 
-   integer :: i, j, k ,id
-   real    :: xmax, ymax, zmax, x, y, z, taueq1, taupole1, taueq2, taupole2
+   integer, intent(IN) :: id
+   integer :: i, j, k
+   real    :: x, y, z, taueq1, taupole1, taueq2, taupole2
 
    if(id == 0)then
       print*, ' '

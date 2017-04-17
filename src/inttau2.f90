@@ -2,20 +2,23 @@ module inttau2
 
    implicit none
    
+   private
+   public :: tauint1
+
 CONTAINS
 
-    subroutine tauint1(xmax,ymax,zmax,xcell,ycell,zcell,tflag,iseed,delta)
+    subroutine tauint1(xcell,ycell,zcell,tflag,iseed,delta)
     !optical depth integration subroutine
     !
     !
-        use constants,   only : twopi, pi
+        use constants,   only : twopi, pi, xmax, ymax, zmax
         use photon_vars, only : xp, yp, zp, phase, angle
         use iarray,      only : jmean, rhokap, intensity, phasor
         use opt_prop,    only : wavelength
    
         implicit none
 
-        real,    intent(IN)    :: xmax, ymax, zmax, delta
+        real,    intent(IN)    :: delta
         integer, intent(INOUT) :: xcell, ycell, zcell, iseed
         logical, intent(INOUT) :: tflag
 
