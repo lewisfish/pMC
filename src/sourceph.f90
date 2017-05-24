@@ -18,41 +18,50 @@ MODULE sourceph_mod
             integer,          intent(OUT)   :: xcell, ycell, zcell
             integer,          intent(INOUT) :: iseed
 
-            real    :: w, x, y
+            real    :: w, x, y, ran2
             integer :: error
-                ! 0.00250
+
             w = 0.0000075
-            x = 0.
-            y = 0.
 
             select case (beam)
             case('bessel')
                 call bessel(w, iseed)
+                nxp = sint * cosp  
+                nyp = sint * sinp
+                nzp = cost
             case('gaussian')
-                call gaussian(w, iseed)
-            case('gaussian_p')
-                call gaussian_phase(w, iseed)
+                call gaussian_phase(iseed)
+                phi = atan2(nyp,nxp)
+                cosp = cos(phi)
+                sinp = sin(phi)
+
+                cost = nzp
+                sint = sqrt(1. - cost**2.)
             case('point')
+                x = 0.
+                y = 0.
+                if(ran2(iseed) < .5)x = x - xmax/10.
                 call point(x, y, iseed)
+                nxp = sint * cosp  
+                nyp = sint * sinp
+                nzp = cost
             case('circular')
                 call circular(w, iseed)
+                nxp = sint * cosp  
+                nyp = sint * sinp
+                nzp = cost
             case('uniform')
                 call uniform(iseed)
+                nxp = sint * cosp  
+                nyp = sint * sinp
+                nzp = cost
             case default
-                print*,'Error, unrecognised beam type!'
                 call mpi_finalize(error)
-                ! call exit(0)
+                error stop 'Error, unrecognised beam type!'
             end select
 
-            phi = atan2(nyp,nxp)
-            cosp = cos(phi)
-            sinp = sin(phi)
 
-            cost = nzp
-            sint = sqrt(1. - cost**2.)
-            ! nxp = sint * cosp  
-            ! nyp = sint * sinp
-            ! nzp = cost
+
 
             xcell = int(nxg * (xp + xmax) / (2. * xmax)) + 1
             ycell = int(nyg * (yp + ymax) / (2. * ymax)) + 1
@@ -87,7 +96,7 @@ MODULE sourceph_mod
             end do
 
             !axicon lens angle
-            angle = 182.
+            angle = 190.
 
             theta = angle*pi/180.
             cost = cos(theta)
@@ -103,43 +112,7 @@ MODULE sourceph_mod
         end subroutine bessel
 
 
-        subroutine gaussian(w, iseed)
-
-            use constants,   only : twopi, nzg, xmax, zmax
-            use photon_vars, only : xp, yp, zp, sint, cost, sinp, cosp, phi, phase
-
-            implicit none
-
-            real, intent(IN)       :: w
-            integer, intent(INOUT) :: iseed
-
-            real :: phigauss, r1, ran2
-
-            zp = zmax - (1.e-5*(2.*zmax/nzg))
-            xp = 0.
-
-            !gaussian beam via box-muller method
-            do
-                r1 = w*sqrt(-2.*log(ran2(iseed)))
-                phigauss = twopi * ran2(iseed)
-                xp = r1 * cos(phigauss)
-                yp = r1 * sin(phigauss)
-                if(xp**2 + yp**2 < xmax**2.)exit
-            end do
-
-            cost = -1.
-            sint = sqrt(1. - cost**2.)
-
-            phi = 0.
-            cosp = cos(phi)
-            sinp = sin(phi)
-
-            !initial phase
-            phase = 0.
-        end subroutine gaussian
-
-
-        subroutine gaussian_phase(w, iseed)
+        subroutine gaussian_phase(iseed)
         ! f => focal length of lens
         ! zr => rayleigh length
         ! zf => z location of of the focus
@@ -151,8 +124,8 @@ MODULE sourceph_mod
 
             implicit none
 
-            real :: w, ran2
-            integer :: iseed
+            integer, intent(INOUT) :: iseed
+            real :: ran2
             real :: xo, yo, zo, zf, f, fact, rz,  D, wo, r1, phigauss, r_pos
 
             zo = zmax - (1.e-5*(2.*zmax/nzg))
@@ -189,8 +162,6 @@ MODULE sourceph_mod
             zp = zo
 
         end subroutine gaussian_phase
-
-
 
 
         subroutine circular(radius, iseed)
@@ -252,6 +223,7 @@ MODULE sourceph_mod
             phase = 0.
 
         end subroutine point
+
 
         subroutine uniform(iseed)
 

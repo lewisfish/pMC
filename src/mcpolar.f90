@@ -3,6 +3,7 @@ program mcpolar
 use mpi
 
 !shared data
+use utils, only : green, blue, bold, colour, red, white_b, black, str
 use constants
 use photon_vars
 use iarray
@@ -81,7 +82,7 @@ call cpu_time(start)
 
 !loop over photons 
 call MPI_Barrier(MPI_COMM_WORLD, error)
-print*,'Photons now running on core: ',id
+print*,'Photons now running on core: ',colour(id, green)
 do j=1,nphotons
   
    call init_opt4
@@ -89,7 +90,7 @@ do j=1,nphotons
    tflag=.FALSE.
 
    if(mod(j,10000) == 0)then
-      print *, j,' scattered photons completed on core: ',id
+      print *, colour(j, blue, bold),' scattered photons completed on core: ',colour(id, str(30+mod(id,7)), bold)
    end if
     
 !***** Release photon from point source *******************************
@@ -123,7 +124,7 @@ call cpu_time(finish)
 if(finish-start.ge.60.)then
  print*,floor((finish-start)/60.)+mod(finish-start,60.)/100.
 else
-      print*, 'time taken ~',floor(finish-start/60.),'s'
+      print*, 'time taken ~',colour(floor(finish-start/60.),red, bold),'s'
 end if
 
 
@@ -139,8 +140,7 @@ call MPI_BARRIER(MPI_COMM_WORLD, error)
 call MPI_REDUCE(nscatt,nscattGLOBAL,1,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,error)
 call MPI_BARRIER(MPI_COMM_WORLD, error)
 
-
-deallocate(xface,yface,zface,rhokap)
+deallocate(xface,yface,zface,rhokap,jmean,phasor,intensity)
 call MPI_BARRIER(MPI_COMM_WORLD, error)
 
 if(id == 0)then
@@ -148,7 +148,7 @@ if(id == 0)then
    !write out files
 
    call writer(nphotons, numproc)
-   print*,'write done'
+   print*,colour('write done',black,white_b,bold)
 end if
 
 call MPI_Finalize(error)

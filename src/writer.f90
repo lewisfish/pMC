@@ -28,21 +28,21 @@ CONTAINS
         print*,
 
         print*,'Written to:'
-        filename = 'jmean/'//trim(beam)//'small-jmean.dat'
+        filename = 'jmean/'//trim(beam)//'-cur-jmean.dat'
         print*,trim(filename)
         call write_binary(trim(filename), jmeanGLOBAL)
 
 
-        filename = 'jmean/'//trim(beam)//'small-phase.dat'
+        filename = 'jmean/'//trim(beam)//'-cur-phase.dat'
         print*,trim(filename)
         call write_binary(trim(filename), phasorGLOBAL)
 
 
-        filename = 'jmean/'//trim(beam)//'small-intesity.dat'
+        filename = 'jmean/'//trim(beam)//'-cur-intesity.dat'
         print*,trim(filename)
         call write_binary(trim(filename), intensityGLOBAL)
 
-        ! filename = 'jmean/'//trim(beam)//'small-absenergy.dat'
+        ! filename = 'jmean/'//trim(beam)//'-cur-absenergy.dat'
         ! print*,trim(filename)
         ! tmp = jmeanGLOBAL*mua
         ! call write_binary(trim(filename), tmp)

@@ -4,4 +4,4 @@
 .0000250              zmax
 1.0	              n1
 1.38              n2
-gaussian_phase    beam
+gaussian   beam

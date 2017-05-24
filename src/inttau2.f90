@@ -11,7 +11,7 @@ CONTAINS
     !optical depth integration subroutine
     !
     !
-        use constants,   only : twopi, pi, xmax, ymax, zmax, nxg, nyg, nzg
+        use constants,   only : twopi, pi, xmax, ymax, zmax, nxg, nyg, nzg, beam
         use photon_vars, only : xp, yp, zp, phase, angle, zr
         use iarray,      only : rhokap, phasor, jmean, intensity
         use opt_prop,    only : wavelength, lambdaInPx
@@ -48,27 +48,39 @@ CONTAINS
                 taurun = taurun + taucell
                 d = d + dcell
                 jmean(celli, cellj, cellk) = jmean(celli, cellj, cellk) + dcell
-                
-                r_pos = sqrt((xcur-xmax)**2.+(ycur-ymax)**2.)
-                z = 2.*zmax-zcur
-                r = z + zr**2/z
 
-                ! print*,z,zr
-                ph = (twopi * zcur/wavelength) + (pi*r_pos**2/r) - atan2(z,zr)
+                r_pos = sqrt((xcur-xmax)**2.+(ycur-ymax)**2.)
+
+                select case (beam)
+                case('bessel')
+                    ph = ((twopi* d)/ wavelength) -(twopi*r_pos/wavelength * sin(angle*pi/180.))
+                case('gaussian')
+                    z = 2.*zmax-zcur
+                    r = z + zr**2/z
+                    ph = (twopi * d/wavelength) + (pi*r_pos**2/r) - atan2(z, zr)
+                case default
+                    ph = (twopi * d/wavelength)
+                end select
 
                 a = abs(cos(ph))**2.
                 phase = phase + ph
 
-                li = max(1, int(celli - lambdaInPx/2.))
-                hi = min(nxg, int(celli + lambdaInPx/2.))
-                lj = max(1, int(cellj - lambdaInPx/2.))
-                hj = min(nyg, int(cellj + lambdaInPx/2.))
-                lk = max(1, int(cellk - lambdaInPx/2.))
-                hk = min(nzg, int(cellk + lambdaInPx/2.))
 
-                phasor(li:hi,lj:hj, lk:hk) = phasor(li:hi,lj:hj, lk:hk) + a 
-                intensity(li:hi,lj:hj, lk:hk) = intensity(li:hi,lj:hj, lk:hk) + phase
-                
+                if(beam == 'gaussian')then
+                    li = max(1, int(celli - lambdaInPx/2.))
+                    hi = min(nxg, int(celli + lambdaInPx/2.))
+                    lj = max(1, int(cellj - lambdaInPx/2.))
+                    hj = min(nyg, int(cellj + lambdaInPx/2.))
+                    lk = max(1, int(cellk - lambdaInPx/2.))
+                    hk = min(nzg, int(cellk + lambdaInPx/2.))
+
+                    phasor(li:hi,lj:hj, lk:hk) = phasor(li:hi,lj:hj, lk:hk) + a 
+                    intensity(li:hi,lj:hj, lk:hk) = intensity(li:hi,lj:hj, lk:hk) + phase
+                else
+                    phasor(celli,cellj,cellk) = phasor(celli,cellj,cellk) + a 
+                    intensity(celli,cellj,cellk) = intensity(celli,cellj,cellk) + phase
+                end if
+
                 call update_pos(xcur, ycur, zcur, celli, cellj, cellk, dcell, .TRUE., dir, delta)
             else
 
@@ -77,24 +89,35 @@ CONTAINS
                 jmean(celli, cellj, cellk) = jmean(celli, cellj, cellk) + dcell
                 
                 r_pos = sqrt((xcur-xmax)**2.+(ycur-ymax)**2.)
-                z = 2.*zmax-zcur
-                r = z + zr**2/z
 
-                ph = (twopi * zcur/wavelength) + (pi*r_pos**2/r) - atan2(z,zr)
-                
-                a = cos(ph)
+                select case (beam)
+                case('bessel')
+                    ph = ((twopi* d)/ wavelength) -(twopi*r_pos/wavelength * sin(angle*pi/180.))
+                case('gaussian')
+                    z = 2.*zmax-zcur
+                    r = z + zr**2/z
+                    ph = (twopi * d/wavelength) + (pi*r_pos**2/r) - atan2(z, zr)
+                case default
+                    ph = (twopi * d/wavelength)
+                end select
+
+                a = abs(cos(ph))**2.
                 phase = phase + ph
 
-                li = max(1, int(celli - lambdaInPx/2.))
-                hi = min(nxg, int(celli + lambdaInPx/2.))
-                lj = max(1, int(cellj - lambdaInPx/2.))
-                hj = min(nyg, int(cellj + lambdaInPx/2.))
-                lk = max(1, int(cellk - lambdaInPx/2.))
-                hk = min(nzg, int(cellk + lambdaInPx/2.))
+                if(beam == 'gaussian')then
+                    li = max(1, int(celli - lambdaInPx/2.))
+                    hi = min(nxg, int(celli + lambdaInPx/2.))
+                    lj = max(1, int(cellj - lambdaInPx/2.))
+                    hj = min(nyg, int(cellj + lambdaInPx/2.))
+                    lk = max(1, int(cellk - lambdaInPx/2.))
+                    hk = min(nzg, int(cellk + lambdaInPx/2.))
 
-
-                phasor(li:hi,lj:hj, lk:hk) = phasor(li:hi,lj:hj, lk:hk) + a 
-                intensity(li:hi,lj:hj, lk:hk) = intensity(li:hi,lj:hj, lk:hk) + phase
+                    phasor(li:hi,lj:hj, lk:hk) = phasor(li:hi,lj:hj, lk:hk) + a 
+                    intensity(li:hi,lj:hj, lk:hk) = intensity(li:hi,lj:hj, lk:hk) + phase
+                else
+                    phasor(celli,cellj,cellk) = phasor(celli,cellj,cellk) + a 
+                    intensity(celli,cellj,cellk) = intensity(celli,cellj,cellk) + phase
+                end if
                 
                 call update_pos(xcur, ycur, zcur, celli, cellj, cellk, dcell, .FALSE., dir, delta)
                 exit
@@ -156,10 +179,10 @@ CONTAINS
         end if
 
         wall_dist = min(dx, dy, dz)
-        ! if(wall_dist < 0.)then
-        !     print*,'dcell < 0.0 warning! ',wall_dist,dx,dy,dz,nxp,nyp,nzp
-        !     call exit(0)
-        ! end if
+        if(wall_dist < 0.)then
+            print*,'dcell < 0.0 warning! ',wall_dist,dx,dy,dz,nxp,nyp,nzp
+            error stop 1
+        end if
         if(wall_dist == dx)dir=(/.TRUE., .FALSE., .FALSE./)
         if(wall_dist == dy)dir=(/.FALSE., .TRUE., .FALSE./)
         if(wall_dist == dz)dir=(/.FALSE., .FALSE., .TRUE./)
@@ -174,13 +197,15 @@ CONTAINS
     !
         use photon_vars, only : nxp, nyp, nzp
         use iarray,      only : xface, yface, zface
+        use utils,       only : str, red, bold, colour
 
         implicit none
       
       real,    intent(INOUT) :: xcur, ycur, zcur
       real,    intent(IN)    :: dcell, delta
       integer, intent(INOUT) :: celli, cellj, cellk
-      logical, intent(IN)    :: wall_flag, dir(:)   
+      logical, intent(IN)    :: wall_flag, dir(:)
+      character(len=32)      :: tmp  
       
       if(wall_flag)then
       
@@ -215,8 +240,8 @@ CONTAINS
                print*,'Error in z dir in update_pos', dir, nxp, nyp, nzp
             end if
          else
-            print*,'Error in update_pos...',dir
-            call exit(0)
+            tmp = colour('Error in update_pos... '//str(dir), red, bold)
+            error stop 1
          end if
       else
       
@@ -310,8 +335,7 @@ CONTAINS
                 acur = delta
                 cella = 1
             else
-                print*,'Error in Repeat_bounds...'
-                call exit(0)
+                error stop 'Error in Repeat_bounds...'
             end if
         end if
         if(cellb == -1)then
@@ -322,8 +346,7 @@ CONTAINS
                 bcur = delta
                 cellb = 1
             else
-                print*,'Error in Repeat_bounds...'
-                call exit(0)
+                error stop 'Error in Repeat_bounds...'
             end if
         ! else
         ! tflag=.true.

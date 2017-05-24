@@ -8,6 +8,7 @@ SRCS =      ran2.f \
             photon_vars.f90 \
             iarray.f90 \
             opt_prop.f90 \
+            utils.f90 \
             subs.f90 \
             ch_opt.f90 \
             density.f90 \
