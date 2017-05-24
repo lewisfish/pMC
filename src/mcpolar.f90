@@ -59,6 +59,7 @@ iseed = -abs(iseed)  ! Random number seed must be negative for ran2
 
 call init_opt4
 wavelength = 785.0e-9
+lambdainpx = wavelength/(2.*xmax/nxg)
 
 
 if(id == 0)then
@@ -139,7 +140,7 @@ call MPI_REDUCE(nscatt,nscattGLOBAL,1,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WO
 call MPI_BARRIER(MPI_COMM_WORLD, error)
 
 
-deallocate(jmean,intensity,xface,yface,zface,rhokap)
+deallocate(xface,yface,zface,rhokap)
 call MPI_BARRIER(MPI_COMM_WORLD, error)
 
 if(id == 0)then

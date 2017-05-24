@@ -1,7 +1,7 @@
-1000000           nphotons
-.000250              xmax
-.000250              ymax
-.002500              zmax
+100000           nphotons
+.0000250              xmax
+.0000250              ymax
+.0000250              zmax
 1.0	              n1
 1.38              n2
-bessel            beam
+gaussian_phase    beam

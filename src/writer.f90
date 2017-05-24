@@ -16,14 +16,11 @@ CONTAINS
     subroutine writer(nphotons, numproc)
 
         use constants, only : nxg, nyg, nzg, xmax, ymax, zmax, beam
-        use iarray,    only : jmeanGLOBAL, intensityGLOBAL, phasorGLOBAL,rhokap
-        use opt_prop,  only : mua
+        use iarray,    only : phasorGLOBAL, jmeanGLOBAL, intensityGLOBAL
 
         implicit none
 
         integer, intent(IN) :: nphotons, numproc
-        integer :: i, u
-        real :: tmp(nxg,nyg,nzg)
         character(len=256) :: filename
 
         jmeanGLOBAL = jmeanGLOBAL * ((2.*xmax)**2./(nphotons*numproc*(2.*xmax/nxg)*(2.*ymax/nyg)*(2.*zmax/nzg)))
@@ -31,24 +28,24 @@ CONTAINS
         print*,
 
         print*,'Written to:'
-        filename = 'jmean/'//trim(beam)//'1-jmean.dat'
+        filename = 'jmean/'//trim(beam)//'small-jmean.dat'
         print*,trim(filename)
         call write_binary(trim(filename), jmeanGLOBAL)
 
 
-        filename = 'jmean/'//trim(beam)//'1-phase.dat'
+        filename = 'jmean/'//trim(beam)//'small-phase.dat'
         print*,trim(filename)
         call write_binary(trim(filename), phasorGLOBAL)
 
 
-        filename = 'jmean/'//trim(beam)//'1-intesity.dat'
+        filename = 'jmean/'//trim(beam)//'small-intesity.dat'
         print*,trim(filename)
         call write_binary(trim(filename), intensityGLOBAL)
 
-        filename = 'jmean/'//trim(beam)//'1-absenergy.dat'
-        print*,trim(filename)
-        tmp = jmeanGLOBAL*mua
-        call write_binary(trim(filename), tmp)
+        ! filename = 'jmean/'//trim(beam)//'small-absenergy.dat'
+        ! print*,trim(filename)
+        ! tmp = jmeanGLOBAL*mua
+        ! call write_binary(trim(filename), tmp)
 
     end subroutine writer
 

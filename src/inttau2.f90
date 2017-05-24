@@ -11,10 +11,10 @@ CONTAINS
     !optical depth integration subroutine
     !
     !
-        use constants,   only : twopi, pi, xmax, ymax, zmax
-        use photon_vars, only : xp, yp, zp, phase, angle
-        use iarray,      only : jmean, rhokap, intensity, phasor
-        use opt_prop,    only : wavelength
+        use constants,   only : twopi, pi, xmax, ymax, zmax, nxg, nyg, nzg
+        use photon_vars, only : xp, yp, zp, phase, angle, zr
+        use iarray,      only : rhokap, phasor, jmean, intensity
+        use opt_prop,    only : wavelength, lambdaInPx
    
         implicit none
 
@@ -22,8 +22,8 @@ CONTAINS
         integer, intent(INOUT) :: xcell, ycell, zcell, iseed
         logical, intent(INOUT) :: tflag
 
-        real                   :: tau, taurun, taucell, xcur, ycur, zcur, d, dcell, ran2, r_pos, a, b
-        integer                :: celli, cellj, cellk
+        real                   :: tau, taurun, taucell, xcur, ycur, zcur, d, dcell, ran2, r_pos, a, b,z,r,ph
+        integer                :: celli, cellj, cellk, li, hi, lj, hj, lk, hk
         logical                :: dir(3)
         complex :: tmp
 
@@ -44,20 +44,30 @@ CONTAINS
             dir = (/.FALSE., .FALSE., .FALSE./)
             dcell = wall_dist(celli, cellj, cellk, xcur, ycur, zcur, dir)
             taucell = dcell * rhokap(celli,cellj,cellk)
-
             if(taurun + taucell < tau)then
                 taurun = taurun + taucell
                 d = d + dcell
                 jmean(celli, cellj, cellk) = jmean(celli, cellj, cellk) + dcell
                 
                 r_pos = sqrt((xcur-xmax)**2.+(ycur-ymax)**2.)
-                phase = ((twopi* d)/ wavelength) -(twopi*r_pos/wavelength * sin(angle*pi/180.))
-                a = cos(phase)
-                b = sin(phase)
-                tmp = cmplx(a, b)
+                z = 2.*zmax-zcur
+                r = z + zr**2/z
 
-                phasor(celli,cellj, cellk) = phasor(celli, cellj,cellk) + a
-                intensity(celli,cellj, cellk) = intensity(celli, cellj,cellk) + abs(tmp)**2
+                ! print*,z,zr
+                ph = (twopi * zcur/wavelength) + (pi*r_pos**2/r) - atan2(z,zr)
+
+                a = abs(cos(ph))**2.
+                phase = phase + ph
+
+                li = max(1, int(celli - lambdaInPx/2.))
+                hi = min(nxg, int(celli + lambdaInPx/2.))
+                lj = max(1, int(cellj - lambdaInPx/2.))
+                hj = min(nyg, int(cellj + lambdaInPx/2.))
+                lk = max(1, int(cellk - lambdaInPx/2.))
+                hk = min(nzg, int(cellk + lambdaInPx/2.))
+
+                phasor(li:hi,lj:hj, lk:hk) = phasor(li:hi,lj:hj, lk:hk) + a 
+                intensity(li:hi,lj:hj, lk:hk) = intensity(li:hi,lj:hj, lk:hk) + phase
                 
                 call update_pos(xcur, ycur, zcur, celli, cellj, cellk, dcell, .TRUE., dir, delta)
             else
@@ -67,13 +77,24 @@ CONTAINS
                 jmean(celli, cellj, cellk) = jmean(celli, cellj, cellk) + dcell
                 
                 r_pos = sqrt((xcur-xmax)**2.+(ycur-ymax)**2.)
-                phase = ((twopi* d)/ wavelength) -(twopi*r_pos/wavelength * sin(angle*pi/180.))
-                a = cos(phase)
-                b = sin(phase)
-                tmp = cmplx(a, b)
+                z = 2.*zmax-zcur
+                r = z + zr**2/z
 
-                phasor(celli,cellj, cellk) = phasor(celli, cellj,cellk) + a
-                intensity(celli,cellj, cellk) = intensity(celli, cellj,cellk) + abs(tmp)**2
+                ph = (twopi * zcur/wavelength) + (pi*r_pos**2/r) - atan2(z,zr)
+                
+                a = cos(ph)
+                phase = phase + ph
+
+                li = max(1, int(celli - lambdaInPx/2.))
+                hi = min(nxg, int(celli + lambdaInPx/2.))
+                lj = max(1, int(cellj - lambdaInPx/2.))
+                hj = min(nyg, int(cellj + lambdaInPx/2.))
+                lk = max(1, int(cellk - lambdaInPx/2.))
+                hk = min(nzg, int(cellk + lambdaInPx/2.))
+
+
+                phasor(li:hi,lj:hj, lk:hk) = phasor(li:hi,lj:hj, lk:hk) + a 
+                intensity(li:hi,lj:hj, lk:hk) = intensity(li:hi,lj:hj, lk:hk) + phase
                 
                 call update_pos(xcur, ycur, zcur, celli, cellj, cellk, dcell, .FALSE., dir, delta)
                 exit
@@ -135,7 +156,10 @@ CONTAINS
         end if
 
         wall_dist = min(dx, dy, dz)
-        if(wall_dist < 0.)print'(A,7F9.5)','dcell < 0.0 warning! ',wall_dist,dx,dy,dz,nxp,nyp,nzp
+        ! if(wall_dist < 0.)then
+        !     print*,'dcell < 0.0 warning! ',wall_dist,dx,dy,dz,nxp,nyp,nzp
+        !     call exit(0)
+        ! end if
         if(wall_dist == dx)dir=(/.TRUE., .FALSE., .FALSE./)
         if(wall_dist == dy)dir=(/.FALSE., .TRUE., .FALSE./)
         if(wall_dist == dz)dir=(/.FALSE., .FALSE., .TRUE./)

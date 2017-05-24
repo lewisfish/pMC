@@ -10,7 +10,7 @@ MODULE sourceph_mod
         subroutine sourceph(xcell, ycell, zcell, iseed)
 
             use constants,   only : nxg, nyg, nzg, beam, xmax, ymax, zmax
-            use photon_vars, only : xp, yp, zp, nxp, nyp, nzp, sint, cost, sinp, cosp
+            use photon_vars, only : xp, yp, zp, nxp, nyp, nzp, sint, cost, sinp, cosp, phi
 
 
             implicit none
@@ -20,8 +20,8 @@ MODULE sourceph_mod
 
             real    :: w, x, y
             integer :: error
-
-            w = 0.00005
+                ! 0.00250
+            w = 0.0000075
             x = 0.
             y = 0.
 
@@ -30,6 +30,8 @@ MODULE sourceph_mod
                 call bessel(w, iseed)
             case('gaussian')
                 call gaussian(w, iseed)
+            case('gaussian_p')
+                call gaussian_phase(w, iseed)
             case('point')
                 call point(x, y, iseed)
             case('circular')
@@ -38,17 +40,24 @@ MODULE sourceph_mod
                 call uniform(iseed)
             case default
                 print*,'Error, unrecognised beam type!'
-                call exit(0)
                 call mpi_finalize(error)
+                ! call exit(0)
             end select
 
-            nxp = sint * cosp  
-            nyp = sint * sinp
-            nzp = cost
+            phi = atan2(nyp,nxp)
+            cosp = cos(phi)
+            sinp = sin(phi)
+
+            cost = nzp
+            sint = sqrt(1. - cost**2.)
+            ! nxp = sint * cosp  
+            ! nyp = sint * sinp
+            ! nzp = cost
 
             xcell = int(nxg * (xp + xmax) / (2. * xmax)) + 1
             ycell = int(nyg * (yp + ymax) / (2. * ymax)) + 1
             zcell = int(nzg * (zp + zmax) / (2. * zmax)) + 1
+
         end subroutine sourceph
 
 
@@ -119,7 +128,7 @@ MODULE sourceph_mod
             end do
 
             cost = -1.
-            sint = 1. - cost**2.
+            sint = sqrt(1. - cost**2.)
 
             phi = 0.
             cosp = cos(phi)
@@ -128,6 +137,60 @@ MODULE sourceph_mod
             !initial phase
             phase = 0.
         end subroutine gaussian
+
+
+        subroutine gaussian_phase(w, iseed)
+        ! f => focal length of lens
+        ! zr => rayleigh length
+        ! zf => z location of of the focus
+
+
+            use constants,   only : pi, nzg, zmax, twopi, xmax
+            use photon_vars, only : nxp, nyp, nzp, xp,yp,zp, phase,zr
+            use opt_prop,    only : wavelength
+
+            implicit none
+
+            real :: w, ran2
+            integer :: iseed
+            real :: xo, yo, zo, zf, f, fact, rz,  D, wo, r1, phigauss, r_pos
+
+            zo = zmax - (1.e-5*(2.*zmax/nzg))
+            xo = 0.
+
+            f = zmax/8.
+            D = 1.e-6
+            wo = (2./pi) * (wavelength*f)/D
+            zr = (pi * wo**2)/wavelength
+
+            !gaussian beam via box-muller method
+            do
+                r1 = d*sqrt(-2.*log(ran2(iseed)))
+                phigauss = twopi * ran2(iseed)
+                xo = r1 * cos(phigauss)
+                yo = r1 * sin(phigauss)
+                if(xo**2 + yo**2 < xmax**2.)exit
+            end do
+
+            xp = -xo*((zo - zf)/sqrt(xo**2 + yo**2 + f**2)) 
+            yp = -yo*((zo - zf)/sqrt(xo**2 + yo**2 + f**2)) 
+            zp = zf + f*((zo - zf)/sqrt(xo**2 + yo**2 + f**2)) 
+
+            rz = -(zp - zf) * (1 + (zr / (zp - zf))**2)
+
+            fact = 1./sqrt(1 + ((xp**2 + yp**2) / rz**2))
+
+            nxp = fact * (xp/rz)
+            nyp = fact * (yp/rz)
+            nzp = -1. * fact
+
+            r_pos = sqrt(xp**2 + yp**2)
+            phase = cos(twopi*(abs(zp-zo)+r_pos)/wavelength)
+            zp = zo
+
+        end subroutine gaussian_phase
+
+
 
 
         subroutine circular(radius, iseed)
