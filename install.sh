@@ -1,6 +1,9 @@
 #!/bin/bash
 
+#defaults
 NUM_CORES=1
+debug=0
+
 
 while [[ $# -gt 0 ]];
 do
@@ -15,6 +18,11 @@ case $key in
     NUM_CORES="0"
     shift # past argument
     ;;
+    -d)
+    NUM_CORES="1"
+    debug='1'
+    shift #past argument
+    ;;
     *)
         # unknown option
     ;;
@@ -23,8 +31,13 @@ shift # past argument or value
 done
 
 cd src
+set -e
 
-make clean && make 
+if [ "$debug" = 1 ];then
+    make clean && make debug
+else
+    make clean && make 
+fi
 
 cd ..
 if [ ! -d "data" ]; then
