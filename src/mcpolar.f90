@@ -59,7 +59,7 @@ iseed = -95648324 + id
 iseed = -abs(iseed)  ! Random number seed must be negative for ran2
 
 call init_opt4
-wavelength = 785.0e-9
+wavelength = 1064.e-9
 lambdainpx = wavelength/(2.*xmax/nxg)
 
 
@@ -89,7 +89,7 @@ do j=1,nphotons
 
    tflag=.FALSE.
 
-   if(mod(j,10000) == 0)then
+   if(mod(j,1000) == 0)then
       print *, colour(j, blue, bold),' scattered photons completed on core: ',colour(id, str(30+mod(id,7)), bold)
    end if
     
@@ -119,6 +119,7 @@ do j=1,nphotons
    end do
 end do      ! end loop over nph photons
 
+deallocate(xface,yface,zface,rhokap)
 
 call cpu_time(finish)
 if(finish-start.ge.60.)then
@@ -127,20 +128,33 @@ else
       print*, 'time taken ~',colour(floor(finish-start/60.),red, bold),'s'
 end if
 
-
+allocate(jmeanGLOBAL(nxg,nyg,nzg))
+jmeanGLOBAL = 0.
 call MPI_REDUCE(jmean, jmeanGLOBAL, (nxg*nyg*nzg),MPI_DOUBLE_PRECISION, MPI_SUM,0,MPI_COMM_WORLD,error)
+deallocate(jmean)
+if(id /= 0)deallocate(jmeanGLOBAL)
 call MPI_BARRIER(MPI_COMM_WORLD, error)
 
+
+allocate(intensityGLOBAL(nxg,nyg,nzg))
+intensityGLOBAL = 0.
 call MPI_REDUCE(intensity, intensityGLOBAL, (nxg*nyg*nzg),MPI_DOUBLE_PRECISION, MPI_SUM,0,MPI_COMM_WORLD,error)
+deallocate(intensity)
+if(id /= 0)deallocate(intensityGLOBAL)
 call MPI_BARRIER(MPI_COMM_WORLD, error)
 
+
+allocate(phasorGLOBAL(nxg,nyg,nzg))
+phasorGLOBAL = 0.
 call MPI_REDUCE(phasor, phasorGLOBAL, (nxg*nyg*nzg),MPI_DOUBLE_PRECISION, MPI_SUM,0,MPI_COMM_WORLD,error)
+deallocate(phasor)
+if(id /= 0)deallocate(phasorGLOBAL)
 call MPI_BARRIER(MPI_COMM_WORLD, error)
+
 
 call MPI_REDUCE(nscatt,nscattGLOBAL,1,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,error)
 call MPI_BARRIER(MPI_COMM_WORLD, error)
 
-deallocate(xface,yface,zface,rhokap,jmean,phasor,intensity)
 call MPI_BARRIER(MPI_COMM_WORLD, error)
 
 if(id == 0)then

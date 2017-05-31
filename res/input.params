@@ -1,7 +1,7 @@
-100000           nphotons
-.0000250              xmax
-.0000250              ymax
-.0000250              zmax
+10000           nphotons
+.0000125              xmax
+.0000125              ymax
+.0000125             zmax
 1.0	              n1
 1.38              n2
 gaussian   beam

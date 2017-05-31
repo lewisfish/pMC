@@ -62,9 +62,9 @@ CONTAINS
                     ph = (twopi * d/wavelength)
                 end select
 
-                a = abs(cos(ph))**2.
-                phase = phase + ph
-
+                
+                phase = phase + cos(ph)
+                a = abs(cos(phase))**2.
 
                 if(beam == 'gaussian')then
                     li = max(1, int(celli - lambdaInPx/2.))
@@ -74,11 +74,11 @@ CONTAINS
                     lk = max(1, int(cellk - lambdaInPx/2.))
                     hk = min(nzg, int(cellk + lambdaInPx/2.))
 
-                    phasor(li:hi,lj:hj, lk:hk) = phasor(li:hi,lj:hj, lk:hk) + a 
-                    intensity(li:hi,lj:hj, lk:hk) = intensity(li:hi,lj:hj, lk:hk) + phase
+                    phasor(li:hi,lj:hj, lk:hk) = phasor(li:hi,lj:hj, lk:hk) + phase 
+                    intensity(li:hi,lj:hj, lk:hk) = intensity(li:hi,lj:hj, lk:hk) + a
                 else
-                    phasor(celli,cellj,cellk) = phasor(celli,cellj,cellk) + a 
-                    intensity(celli,cellj,cellk) = intensity(celli,cellj,cellk) + phase
+                    phasor(celli,cellj,cellk) = phasor(celli,cellj,cellk) + phase
+                    intensity(celli,cellj,cellk) = intensity(celli,cellj,cellk) + a
                 end if
 
                 call update_pos(xcur, ycur, zcur, celli, cellj, cellk, dcell, .TRUE., dir, delta)
@@ -101,8 +101,9 @@ CONTAINS
                     ph = (twopi * d/wavelength)
                 end select
 
-                a = abs(cos(ph))**2.
-                phase = phase + ph
+                ! a = abs(cos(ph))**2.
+                phase = phase + cos(ph)
+                a = abs(cos(phase))**2.
 
                 if(beam == 'gaussian')then
                     li = max(1, int(celli - lambdaInPx/2.))
@@ -112,11 +113,11 @@ CONTAINS
                     lk = max(1, int(cellk - lambdaInPx/2.))
                     hk = min(nzg, int(cellk + lambdaInPx/2.))
 
-                    phasor(li:hi,lj:hj, lk:hk) = phasor(li:hi,lj:hj, lk:hk) + a 
-                    intensity(li:hi,lj:hj, lk:hk) = intensity(li:hi,lj:hj, lk:hk) + phase
+                    phasor(li:hi,lj:hj, lk:hk) = phasor(li:hi,lj:hj, lk:hk) + phase 
+                    intensity(li:hi,lj:hj, lk:hk) = intensity(li:hi,lj:hj, lk:hk) + a
                 else
-                    phasor(celli,cellj,cellk) = phasor(celli,cellj,cellk) + a 
-                    intensity(celli,cellj,cellk) = intensity(celli,cellj,cellk) + phase
+                    phasor(celli,cellj,cellk) = phasor(celli,cellj,cellk) + phase 
+                    intensity(celli,cellj,cellk) = intensity(celli,cellj,cellk) + a
                 end if
                 
                 call update_pos(xcur, ycur, zcur, celli, cellj, cellk, dcell, .FALSE., dir, delta)

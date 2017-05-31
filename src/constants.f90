@@ -6,7 +6,7 @@ MODULE constants
 
     implicit none
 
-    integer, parameter :: nxg=200, nyg=200, nzg=200
+    integer, parameter :: nxg=400, nyg=400, nzg=1000
     real,    parameter :: PI=4.*atan(1.), TWOPI=2.*PI
     real               :: xmax, ymax, zmax
     character(len=10)  :: beam

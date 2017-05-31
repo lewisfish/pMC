@@ -72,11 +72,8 @@ CONTAINS
    zface = 0.
    rhokap = 0.
    jmean = 0.
-   jmeanGLOBAL = 0.
    intensity = 0.
-   intensityGLOBAL = 0.
    phasor = 0.
-   phasorGLOBAL = 0.
 
    end SUBROUTINE zarray
 
@@ -91,9 +88,9 @@ CONTAINS
    
    allocate(xface(nxg+1), yface(nyg+1), zface(nzg+1))
    allocate(rhokap(nxg,nyg,nzg))
-   allocate(jmean(nxg,nyg,nzg), jmeanGLOBAL(nxg,nyg,nzg))
-   allocate(intensity(nxg,nyg,nzg), intensityGLOBAL(nxg,nyg,nzg))
-   allocate(phasor(nxg,nyg,nzg), phasorGLOBAL(nxg,nyg,nzg))
+   allocate(jmean(nxg,nyg,nzg))
+   allocate(intensity(nxg,nyg,nzg))
+   allocate(phasor(nxg,nyg,nzg))
 
    
    end SUBROUTINE alloc_array

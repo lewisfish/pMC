@@ -125,20 +125,23 @@ MODULE sourceph_mod
             implicit none
 
             integer, intent(INOUT) :: iseed
-            real :: ran2
+            real :: ran2,w
             real :: xo, yo, zo, zf, f, fact, rz,  D, wo, r1, phigauss, r_pos
+
+
+            w = 0.0000000015
 
             zo = zmax - (1.e-5*(2.*zmax/nzg))
             xo = 0.
 
-            f = zmax/8.
-            D = 1.e-6
+            f = zmax/2000.
+            D = 6.e-8
             wo = (2./pi) * (wavelength*f)/D
             zr = (pi * wo**2)/wavelength
-
+            ! print*,wo,zr
             !gaussian beam via box-muller method
             do
-                r1 = d*sqrt(-2.*log(ran2(iseed)))
+                r1 = w*sqrt(-2.*log(ran2(iseed)))
                 phigauss = twopi * ran2(iseed)
                 xo = r1 * cos(phigauss)
                 yo = r1 * sin(phigauss)
@@ -158,7 +161,7 @@ MODULE sourceph_mod
             nzp = -1. * fact
 
             r_pos = sqrt(xp**2 + yp**2)
-            phase = cos(twopi*(abs(zp-zo)+r_pos)/wavelength)
+            phase = (twopi*(abs(zp-zo)+r_pos)/wavelength)
             zp = zo
 
         end subroutine gaussian_phase
