@@ -29,6 +29,7 @@ module utils
                                    inverse       = '07', &
                                    strikethrough = '09'
 
+    !ANSI control characters                               
     character(len=2), parameter :: start = achar(27)//'['
     character(len=3), parameter :: end = '[0m'
 
@@ -41,9 +42,11 @@ module utils
         module procedure colour_real8
     end interface
 
-    !functions to turn number variables into strings
+    !functions to turn variables into strings
     interface str
-        module procedure str_I
+        module procedure str_I32
+        module procedure str_I64
+        module procedure str_Iarray
         ! module procedure str_R4
         module procedure str_R8
         module procedure str_R8array
@@ -58,7 +61,7 @@ module utils
     end interface swap
 
     private
-    public :: str, swap, colour
+    public :: str, swap, colour, mem_free
     public :: bold, italic, underline, strikethrough, black, red, green, yellow, blue, magenta, cyan, white
     public :: black_b, red_b, green_b, yellow_b, blue_b, magenta_b, cyan_b, white_b
 
@@ -103,19 +106,56 @@ module utils
         end subroutine swap_R8
 
 
-        function str_i(i)
+        function str_I32(i)
+
+            use iso_fortran_env, only : Int32
 
             implicit none
 
-            integer, intent(IN) :: i
+            integer(int32), intent(IN) :: i
 
-            character(len=:), allocatable :: str_i
+            character(len=:), allocatable :: str_I32
             character(len=100) :: string
 
             write(string,'(I100.1)') I
 
-            str_i = trim(adjustl(string))
-        end function str_i
+            str_I32 = trim(adjustl(string))
+        end function str_I32
+
+
+        function str_I64(i)
+
+            use iso_fortran_env, only : Int64
+
+            implicit none
+
+            integer(Int64), intent(IN) :: i
+
+            character(len=:), allocatable :: str_I64
+            character(len=100) :: string
+
+            write(string,'(I100.1)') I
+
+            str_I64 = trim(adjustl(string))
+        end function str_I64
+
+
+        function str_iarray(i)
+
+            implicit none
+
+            integer, intent(IN) :: i(:)
+
+            character(len=:), allocatable :: str_iarray
+            character(len=100) :: string
+            integer :: j
+
+            do j = 1, size(i)
+                write(string,'(I100.1)') I(j)
+                str_iarray = str_iarray//' '//trim(adjustl(string))
+            end do
+            
+        end function str_iarray
 
 
         ! function str_R4(i)
@@ -290,4 +330,26 @@ module utils
                 colourised = start//fmt1//'m'//string//achar(27)//end
             end if
         end function colour_real8
+
+
+        function mem_free()
+
+            use iso_fortran_env, only : int64 !as numbers are large
+
+            implicit none
+
+            integer(int64) :: mem_free
+
+            integer(int64)    :: i
+            character(len=15) :: tmp
+            integer           :: u
+
+            open(newunit=u,file='/proc/meminfo',status='old')
+
+            read(u,*)tmp, i
+            read(u,*)tmp, i
+            read(u,*)tmp, i
+            
+            mem_free = i * 1024_int64 !convert from Kib to b 
+        end function mem_free
 end module utils

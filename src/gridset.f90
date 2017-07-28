@@ -53,11 +53,11 @@ CONTAINS
                !       rhokap(i,j,k)=kappa
                !    end if
                ! else
-                  rhokap(i,j,k)=kappa
                ! end if
          end do
       end do
    end do
+                  rhokap=kappa
 
    !****************** Calculate equatorial and polar optical depths ****
    taueq1=0.

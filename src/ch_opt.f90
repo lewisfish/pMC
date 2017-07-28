@@ -60,16 +60,16 @@ CONTAINS
    
    subroutine init_opt4
 !
-!  subroutine to set tissue optical properties 1435nm
+!  subroutine to set tissue optical properties 488nm
 !
    use opt_prop
    
    implicit none
 
-   hgg = 0.91
+   hgg = 0.88
    g2  = hgg**2.
-   mua = 26.4d0
-   mus = 13.55d0 / (1. - hgg)
+   mua = 0.01d0
+   mus = 600.d0!13.55d0 / (1. - hgg)
 
    kappa  = mus + mua 
    albedo = mus / kappa

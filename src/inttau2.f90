@@ -3,7 +3,7 @@ module inttau2
    implicit none
    
    private
-   public :: tauint1
+   public :: tauint1, peeling
 
 CONTAINS
 
@@ -11,19 +11,20 @@ CONTAINS
     !optical depth integration subroutine
     !
     !
-        use constants,   only : twopi, pi, xmax, ymax, zmax, nxg, nyg, nzg, beam
-        use photon_vars, only : xp, yp, zp, phase, angle, zr
-        use iarray,      only : rhokap, phasor, jmean, intensity
-        use opt_prop,    only : wavelength, lambdaInPx
-   
+        use constants,   only : twopi, pi, xmax, ymax, zmax, nxg, nyg, nzg, beam, nbins, cospim, sinpim, costim, sintim,v,bin_wid
+        use photon_vars, only : xp, yp, zp, phase, angle, zr, nxp, nyp, nzp
+        use iarray,      only : rhokap, phasor!, jmean!, image, imagep  !intensity
+        use opt_prop,    only : wavelength, lambdaInPx, hgg, g2
+           use taufind2
+
         implicit none
 
         real,    intent(IN)    :: delta
         integer, intent(INOUT) :: xcell, ycell, zcell, iseed
         logical, intent(INOUT) :: tflag
 
-        real                   :: tau, taurun, taucell, xcur, ycur, zcur, d, dcell, ran2, r_pos, a, b,z,r,ph
-        integer                :: celli, cellj, cellk, li, hi, lj, hj, lk, hk
+real :: tau, taurun, taucell, xcur, ycur, zcur, d, dcell, ran2, r_pos, a, b,z,r,ph,prob, xim, yim, dist,tau3,hgfact,cosa
+        integer                :: celli, cellj, cellk, li, hi, lj, hj, lk, hk, binx, biny
         logical                :: dir(3)
         complex :: tmp
 
@@ -47,7 +48,7 @@ CONTAINS
             if(taurun + taucell < tau)then
                 taurun = taurun + taucell
                 d = d + dcell
-                jmean(celli, cellj, cellk) = jmean(celli, cellj, cellk) + dcell
+                ! jmean(celli, cellj, cellk) = jmean(celli, cellj, cellk) + dcell
 
                 r_pos = sqrt((xcur-xmax)**2.+(ycur-ymax)**2.)
 
@@ -64,7 +65,7 @@ CONTAINS
 
                 
                 phase = phase + cos(ph)
-                a = abs(cos(phase))**2.
+                ! a = abs(cos(ph))**2.
 
                 if(beam == 'gaussian')then
                     li = max(1, int(celli - lambdaInPx/2.))
@@ -74,11 +75,29 @@ CONTAINS
                     lk = max(1, int(cellk - lambdaInPx/2.))
                     hk = min(nzg, int(cellk + lambdaInPx/2.))
 
-                    phasor(li:hi,lj:hj, lk:hk) = phasor(li:hi,lj:hj, lk:hk) + phase 
-                    intensity(li:hi,lj:hj, lk:hk) = intensity(li:hi,lj:hj, lk:hk) + a
+                    ! phasor(li:hi,lj:hj, lk:hk) = phasor(li:hi,lj:hj, lk:hk) + phase 
+                    ! intensity(li:hi,lj:hj, lk:hk) = intensity(li:hi,lj:hj, lk:hk) + a
                 else
-                    phasor(celli,cellj,cellk) = phasor(celli,cellj,cellk) + phase
-                    intensity(celli,cellj,cellk) = intensity(celli,cellj,cellk) + a
+                    ! xp = xcur - xmax
+                    ! yp = ycur - ymax
+                    ! xim = yp*cospim - xp*sinpim
+                    ! yim = zp*sintim - yp*costim*sinpim - xp*costim*cospim
+
+                    ! binx = floor(xim/bin_wid)
+                    ! biny = floor(yim/bin_wid)
+
+                    ! cosa = nxp*v(1) + nyp*v(2) + nzp*v(3)!angle of peeled off photon
+
+                    ! hgfact = (1.-g2) / ((4.*pi)*(1.+g2-2.*hgg*cosa)**(1.5))
+                    ! ! call tau2(xcell,ycell,zcell,delta, tau3, dist)
+                    ! dist = zcur
+                    ! tau3 = exp(-zcur * sum(rhokap(celli,cellj,1:cellk)))
+                    ! prob =  tau3 * hgfact
+
+                    ! image(binx, biny) = image(binx, biny) + prob
+                    ! imagep(binx, biny) = imagep(binx, biny) + prob * (phase +cos(twopi*dist/wavelength))
+                    phasor(celli,cellj,cellk) = phasor(celli,cellj,cellk) + (phase)
+                    ! intensity(celli,cellj,cellk) = intensity(celli,cellj,cellk) + a
                 end if
 
                 call update_pos(xcur, ycur, zcur, celli, cellj, cellk, dcell, .TRUE., dir, delta)
@@ -86,7 +105,7 @@ CONTAINS
 
                 dcell = (tau - taurun) / rhokap(celli,cellj,cellk)
                 d = d + dcell
-                jmean(celli, cellj, cellk) = jmean(celli, cellj, cellk) + dcell
+                ! jmean(celli, cellj, cellk) = jmean(celli, cellj, cellk) + dcell
                 
                 r_pos = sqrt((xcur-xmax)**2.+(ycur-ymax)**2.)
 
@@ -103,7 +122,7 @@ CONTAINS
 
                 ! a = abs(cos(ph))**2.
                 phase = phase + cos(ph)
-                a = abs(cos(phase))**2.
+                ! a = abs(cos(ph))**2.
 
                 if(beam == 'gaussian')then
                     li = max(1, int(celli - lambdaInPx/2.))
@@ -113,11 +132,29 @@ CONTAINS
                     lk = max(1, int(cellk - lambdaInPx/2.))
                     hk = min(nzg, int(cellk + lambdaInPx/2.))
 
-                    phasor(li:hi,lj:hj, lk:hk) = phasor(li:hi,lj:hj, lk:hk) + phase 
-                    intensity(li:hi,lj:hj, lk:hk) = intensity(li:hi,lj:hj, lk:hk) + a
+                    ! phasor(li:hi,lj:hj, lk:hk) = phasor(li:hi,lj:hj, lk:hk) + phase 
+                    ! intensity(li:hi,lj:hj, lk:hk) = intensity(li:hi,lj:hj, lk:hk) + a
                 else
-                    phasor(celli,cellj,cellk) = phasor(celli,cellj,cellk) + phase 
-                    intensity(celli,cellj,cellk) = intensity(celli,cellj,cellk) + a
+                    phasor(celli,cellj,cellk) = phasor(celli,cellj,cellk) + (phase)
+                    ! xp = xcur - xmax
+                    ! yp = ycur - ymax
+                    ! xim = yp*cospim - xp*sinpim
+                    ! yim = zp*sintim - yp*costim*sinpim - xp*costim*cospim
+
+                    ! binx = floor(xim/bin_wid)
+                    ! biny = floor(yim/bin_wid)
+
+                    ! cosa = nxp*v(1) + nyp*v(2) + nzp*v(3)!angle of peeled off photon
+
+                    ! hgfact = (1.-g2) / ((4.*pi)*(1.+g2-2.*hgg*cosa)**(1.5))
+                    ! ! call tau2(xcell,ycell,zcell,delta, tau3, dist)
+                    ! dist = zcur
+                    ! tau3 = exp(-zcur * sum(rhokap(celli,cellj,1:cellk)))
+                    ! prob =  tau3 * hgfact
+                    ! image(binx, biny) = image(binx, biny) + prob
+                    ! imagep(binx, biny) = imagep(binx, biny) + prob * (phase +cos(twopi*dist/wavelength))
+                    ! phasor(celli,cellj,cellk) = phasor(celli,cellj,cellk) + (phase)
+                    ! intensity(celli,cellj,cellk) = intensity(celli,cellj,cellk) + a
                 end if
                 
                 call update_pos(xcur, ycur, zcur, celli, cellj, cellk, dcell, .FALSE., dir, delta)
@@ -411,4 +448,157 @@ CONTAINS
         end if
    
     end function fresnel
+
+
+    subroutine taufind1(xcell,ycell,zcell,delta,taurun)
+    !   routine to find tau from current position to edge of grid in a direction (nxp,nyp,nzp)
+    !
+    !
+        use photon_vars, only : xp, yp, zp
+        use iarray,      only : rhokap
+        use opt_prop,    only : wavelength
+        use constants,   only : xmax, ymax, zmax 
+     
+        implicit none
+
+        real,    intent(IN)    :: delta
+        integer, intent(INOUT) :: xcell, ycell, zcell
+
+        real                   :: taurun, taucell, xcur, ycur, zcur, d, dcell, tau
+        integer                :: celli, cellj, cellk, iseed
+        logical                :: dir(3),tmp
+
+        xcur = xp + xmax
+        ycur = yp + ymax
+        zcur = zp + zmax
+
+        celli = xcell
+        cellj = ycell
+        cellk = zcell
+
+        taurun = 0.
+        taucell = 0.
+
+        d = 0.
+        dcell = 0.
+
+        dir = (/.FALSE., .FALSE., .FALSE./)
+        do
+            dcell = wall_dist(celli, cellj, cellk, xcur, ycur, zcur, dir)
+            taucell = dcell * rhokap(celli,cellj,cellk)
+
+            taurun = taurun + taucell
+            d = d + dcell
+            call update_pos(xcur, ycur, zcur, celli, cellj, cellk, dcell, .TRUE., dir, delta)
+
+            if(celli == -1 .or. cellj == -1 .or. cellk == -1)then
+                exit
+            end if
+        end do
+    end subroutine taufind1
+
+
+    subroutine tauquick(xcell, ycell, zcell, zp, delta, taurun)
+
+        use constants,   only : nzg, zmax
+        use iarray,      only : rhokap, zface
+        use opt_prop,    only : material, wavelength
+        use photon_vars, only : nzp
+
+        implicit none
+
+
+        integer, intent(IN)  :: xcell, ycell, zcell
+        real,    intent(IN)  :: zp, delta
+        real,    intent(OUT) :: taurun
+
+        integer :: cellk
+        real    :: tau, dcell, taucell, zcur
+
+        taurun = 0.
+
+        zcur = zp + zmax
+
+        do cellk = zcell, 1 -1
+
+            dcell = (zface(cellk) - zcur)/nzp
+            taucell = dcell * rhokap(xcell, ycell, cellk)
+            taurun = taurun + taucell
+            zcur = zface(cellk) + delta
+        end do
+    end subroutine tauquick
+
+
+    subroutine peeling(xcell,ycell,zcell,delta)
+   
+        ! use iarray,      only : image, imaget, imagethg, imagep
+        use constants,   only : PI, xmax, ymax, zmax, v, costim, sintim, cospim, sinpim, nbins, twopi
+        use photon_vars, only : xp, yp, zp, nxp, nyp, nzp, phase
+        use opt_prop,    only : hgg, g2, wavelength
+        use taufind2
+
+        implicit none
+
+
+        real,    intent(IN)    :: delta
+        integer, intent(INOUT) :: xcell, ycell, zcell
+        real                   :: cosa, tau1, prob, xim, yim, bin_wid,xpold,ypold
+        real                   :: nxpold, nypold, nzpold, hgfact,zpold, tau3, dist
+        integer                :: binx, biny, xcellold, ycellold, zcellold
+
+
+        nxpold = nxp
+        nypold = nyp
+        nzpold = nzp
+
+        xcellold = xcell
+        ycellold = ycell
+        zcellold = zcell
+
+        xpold = xp
+        ypold = yp
+        zpold = zp
+        cosa = nxp*v(1) + nyp*v(2) + nzp*v(3)!angle of peeled off photon
+
+        nxp = v(1)
+        nyp = v(2)
+        nzp = v(3)
+        xim = yp*cospim - xp*sinpim
+        yim = zp*sintim - yp*costim*sinpim - xp*costim*cospim
+
+        ! call taufind1(xcell, ycell, zcell, delta, tau3)
+        call tau2(xcell,ycell,zcell,delta, tau3, dist)
+
+        bin_wid = 4.*xmax/Nbins
+
+        binx = floor(xim/bin_wid)
+        biny = floor(yim/bin_wid)
+
+
+        hgfact = (1.-g2) / ((4.*pi)*(1.+g2-2.*hgg*cosa)**(1.5))
+
+        prob =  cos(twopi*dist/wavelength) !* tau3 !* hgfact
+        ! image(binx, biny) = image(binx, biny) + prob
+        ! imagep(binx, biny) = imagep(binx, biny) + prob + phase
+        ! imaget(binx, biny) = imaget(binx, biny) + prob*tau3
+        ! imagethg(binx, biny) = imagethg(binx, biny) + prob*tau3*hgfact
+
+        nxp = nxpold
+        nyp = nypold
+        nzp = nzpold
+
+        xcell = xcellold 
+        ycell = ycellold 
+        zcell = zcellold 
+
+    end subroutine peeling
+
+
+
+
+
+
+
+
+
 end module inttau2
