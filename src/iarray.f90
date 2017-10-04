@@ -6,7 +6,7 @@ implicit none
 save
 
 real, allocatable :: xface(:), yface(:), zface(:)
-real, allocatable :: rhokap(:,:,:)
+! real, allocatable :: rhokap(:,:,:)
 ! real, allocatable :: image(:,:), imageGLOBAL(:,:)
 ! real, allocatable :: imagep(:,:), imagepGLOBAL(:,:)
 
@@ -15,5 +15,5 @@ real, allocatable :: rhokap(:,:,:)
 
 ! real, allocatable :: jmean(:,:,:), jmeanGLOBAL(:,:,:)
 ! real, allocatable :: intensity(:,:,:), intensityGLOBAL(:,:,:)
-real, allocatable :: phasor(:,:,:), phasorGLOBAL(:,:,:)
+real, allocatable :: phasor(:,:), phasorGLOBAL(:,:)
 end MODULE iarray

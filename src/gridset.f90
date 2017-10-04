@@ -8,8 +8,8 @@ CONTAINS
 
    use density_mod
    use constants, only : nxg, nyg, nzg, xmax, ymax, zmax
-   use iarray,    only : rhokap, xface, yface, zface
-   use opt_prop,  only : kappa
+   use iarray,    only : xface, yface, zface!, rhokap
+   ! use opt_prop,  only : kappa
    use ch_opt
 
    implicit none
@@ -42,9 +42,9 @@ CONTAINS
             z = zface(k)-zmax+zmax/nzg
 !***********Call density setup subroutine
             
-               ! if(i >= 95 .and. i<= 105)then
-               !    if(j >= 95 .and. j<= 105)then
-               !       if(k >= 150 .and. k<= 160)then
+               ! if(i >= 355 .and. i<= 395)then
+               !    if(j >= 355 .and. j<= 395)then
+               !       if(k >= 355 .and. k<= 395)then
                !          rhokap(i,j,k)=100000.*kappa
                !       else
                !          rhokap(i,j,k)=kappa
@@ -53,28 +53,29 @@ CONTAINS
                !       rhokap(i,j,k)=kappa
                !    end if
                ! else
+               !    rhokap(i,j,k)=kappa
                ! end if
          end do
       end do
    end do
-                  rhokap=kappa
+                  ! rhokap=kappa
 
    !****************** Calculate equatorial and polar optical depths ****
    taueq1=0.
    taupole1=0.
    taueq2=0.
    taupole2=0.
-   do i=1,nxg
-      taueq1=taueq1+rhokap(i,nyg/2,nzg/2)
-   end do
-   do i=1,nzg
-      taupole1=taupole1+rhokap(nxg/2,nyg/2,i)
-   end do
-   taueq1=taueq1*2.*xmax/nxg
-   taupole1=taupole1*2.*zmax/nzg
-   if(id == 0)then
-      print'(A,F9.5,A,F9.5)',' taueq1 = ',taueq1,'  taupole1 = ',taupole1
-   end if
+   ! do i=1,nxg
+   !    taueq1=taueq1+rhokap(i,nyg/2,nzg/2)
+   ! end do
+   ! do i=1,nzg
+   !    taupole1=taupole1+rhokap(nxg/2,nyg/2,i)
+   ! end do
+   ! taueq1=taueq1*2.*xmax/nxg
+   ! taupole1=taupole1*2.*zmax/nzg
+   ! if(id == 0)then
+      ! print'(A,F9.5,A,F9.5)',' taueq1 = ',taueq1,'  taupole1 = ',taupole1
+   ! end if
    
    end subroutine gridset
 end MODULE gridset_mod

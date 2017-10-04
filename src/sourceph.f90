@@ -25,7 +25,7 @@ MODULE sourceph_mod
 
             select case (beam)
             case('bessel')
-                call bessel(w, iseed)
+                call bessel(iseed)
             case('gaussian')
                 call gaussian_phase(iseed)
                 phi = atan2(nyp,nxp)
@@ -35,9 +35,9 @@ MODULE sourceph_mod
                 cost = nzp
                 sint = sqrt(1. - cost**2.)
             case('point')
-                x = 0.
+                x = xmax/4.!need large $\lambda$ small seperation for a few maxima
                 y = 0.
-                if(ran2(iseed) < .5)x = x - xmax/10.
+                if(ran2(iseed) < .5)x = -xmax/4.
                 call point(x, y, iseed)
                 nxp = sint * cosp  
                 nyp = sint * sinp
@@ -57,19 +57,14 @@ MODULE sourceph_mod
                 error stop 'Error, unrecognised beam type!'
             end select
 
-
-
-
             xcell = int(nxg * (xp + xmax) / (2. * xmax)) + 1
             ycell = int(nyg * (yp + ymax) / (2. * ymax)) + 1
             zcell = int(nzg * (zp + zmax) / (2. * zmax)) + 1
 
         end subroutine sourceph
 
-!
-!fix so photons can enter medium along sides...
-!
-        subroutine bessel(w, iseed)
+
+        subroutine bessel(iseed)
 
             use constants,   only : twopi, pi, nzg, xmax, zmax, nxg, nyg, ymax
             use opt_prop,    only : wavelength
@@ -77,41 +72,40 @@ MODULE sourceph_mod
 
             implicit none
 
-            real, intent(IN)       :: w
             integer, intent(INOUT) :: iseed
 
-            real :: r1, phigauss, ran2, theta, r_pos
+            real :: r1, phigauss, ran2, theta, r_pos, alpha, beta, rpos_skin
             real :: x0, y0, z0, t, t1
             integer,save :: count
 
 
-
             zp = zmax - (1.e-5*(2.*zmax/nzg))
             xp = 0.
-            !gaussian beam via box-muller method
+            !gaussian beam via margasalia method
             do
                 zp = zmax - (1.e-5*(2.*zmax/nzg))
-                ! do
-                !gaussian beam via mar 000100
-                    xp = rang(0.d0, .05d0, iseed)
-                    yp = rang(0.d0, .05d0, iseed)
-                    ! r1 = w*sqrt(-2.*log(ran2(iseed)))
-                    ! phigauss = twopi * ran2(iseed)
-                    ! xp = r1 * cos(phigauss)
-                    ! yp = r1 * sin(phigauss)
-                    ! if(xp**2 + yp**2 < 0.1**2.)exit
-                ! end do
-                x0 = xp
-                y0 = yp
-                z0 = 10.d-3 + zmax
-                !axicon lens angle
-                angle = 180. + 5.!2.314
+                !sigma = 1/e^2 diameter of beam / 4
+                xp = rang(0., .1d0/4.d0, iseed)
+                yp = rang(0., .1d0/4.d0, iseed)
 
-                theta = angle*pi/180.
-                cost = cos(theta)
-                sint = sin(theta)
 
-                phi = atan2(yp,xp)
+                !axicon deflection angle, beta
+                angle = 180. + 2.314!18.!2.314could be 5...
+
+                !adjust photon from on axicon to just in skin, using trig see bessel_geo_skin.svg
+                alpha = 5.*pi/180.
+                beta = angle*pi/180.
+
+                r_pos = sqrt(xp**2 + yp**2)
+                rpos_skin = (1. - tan(alpha)*tan(beta))*r_pos
+                phi = atan2(yp, xp)
+
+                xp = rpos_skin * cos(phi)
+                yp = rpos_skin * sin(phi)
+
+                cost = cos(beta)
+                sint = sin(beta)
+
                 cosp = cos(phi)
                 sinp = sin(phi)
 
@@ -119,85 +113,26 @@ MODULE sourceph_mod
                 nyp = sint * sinp
                 nzp = cost
 
+                x0 = xp
+                y0 = yp
+                z0 =  zmax + 1.
+
                 t = (zp - z0)/nzp
                 yp = nyp * t + y0
                 xp = nxp * t + x0
 
+
                 if(abs(xp) > xmax .or. abs(yp) > ymax)then
-                    if(abs(xp) > xmax .and. abs(yp) > ymax)then
-                        if(xp > xmax .and. yp > ymax)then
-                            x0 = xp
-                            y0 = yp
-                            xp = xmax - (1.e-5*(2.*xmax/nxg))
-                            yp = ymax - (1.e-5*(2.*ymax/nyg))
-                            t = (xp - x0)/nxp
-                            zp = nzp * t + z0
-                        elseif(xp > xmax .and. yp < ymax)then
-                            x0 = xp
-                            y0 = yp
-                            xp = xmax - (1.e-5*(2.*xmax/nxg))
-                            yp = -ymax + (1.e-5*(2.*ymax/nyg))
-                            t = (xp - x0)/nxp
-                            zp = nzp * t + z0
-                        elseif(xp < xmax .and. yp > ymax)then
-                            x0 = xp
-                            y0 = yp
-                            xp = -xmax + (1.e-5*(2.*xmax/nxg))
-                            yp = ymax - (1.e-5*(2.*ymax/nyg))
-                            t = (xp - x0)/nxp
-                            zp = nzp * t + z0
-                        elseif(xp < xmax .and. yp < ymax)then
-                            x0 = xp
-                            y0 = yp
-                            xp = -xmax + (1.e-5*(2.*xmax/nxg))
-                            yp = -ymax + (1.e-5*(2.*ymax/nyg))
-                            t = (xp - x0)/nxp
-                            zp = nzp * t + z0
-                        else
-                            stop 'error in adjustment in sourceph.f90'
-                        end if
-                        if(abs(xp) < xmax .and. abs(yp) < ymax .and. abs(zp) < zmax )exit
-                    else
-                    ! print*,xp,yp,zp
-                        if(xp > xmax)then
-                            x0 = xp
-                            xp = xmax - (1.e-5*(2.*xmax/nxg))
-                            t = (xp - x0)/nxp
-                            yp = nyp * t + y0
-                            zp = nzp * t + z0
-                        elseif(xp < -xmax)then
-                            x0 = xp
-                            xp = -xmax + (1.e-5*(2.*xmax/nxg))
-                            t = (xp - x0)/nxp
-                            yp = nyp * t + y0
-                            zp = nzp * t + z0
-                        elseif(yp > ymax)then
-                            y0 = yp
-                            yp = ymax - (1.e-5*(2.*ymax/nyg))
-                            t = (yp - y0)/nyp
-                            xp = nxp * t + x0
-                            zp = nzp * t + z0
-                        elseif(yp < -ymax)then
-                            y0 = yp
-                            yp = -ymax + (1.e-5*(2.*ymax/nyg))
-                            t = (yp - y0)/nyp
-                            xp = nxp * t + x0
-                            zp = nzp * t + z0
-                        end if
-                        if(abs(xp) < xmax .and. abs(yp) < ymax .and. abs(zp) < zmax )then
-                            ! print*,x0,y0,z0
-                            ! print*,xp,yp,zp
-                            ! print*,' '
-                            exit
-                        end if
-                    end if
+                    continue
                 else
                     exit
                 end if
+
             end do
             !initial phase
             r_pos = sqrt(xp**2 + yp**2)
             phase = cos(twopi*r_pos/wavelength * sin((angle-180)*pi/180.) + twopi*1.0/wavelength)
+
         end subroutine bessel
 
 
@@ -219,7 +154,7 @@ MODULE sourceph_mod
 
 
             w = 0.0000000015
-
+            zf = zmax-.01
             zo = zmax - (1.e-5*(2.*zmax/nzg))
             xo = 0.
 
@@ -306,7 +241,7 @@ MODULE sourceph_mod
             yp = y
 
             cost = 2. * ran2(iseed) - 1.
-            sint = 1. - cost * cost 
+            sint = sqrt(1. - cost * cost) 
 
             phi = twopi * ran2(iseed)
             cosp = cos(phi)

@@ -3,7 +3,7 @@ module taufind2
    contains
 subroutine tau2(xcell, ycell, zcell, delta, taurun, dist)
 
-      use iarray,      only : rhokap, xface, yface, zface
+      use iarray,      only : xface, yface, zface
       use photon_vars, only : xp, yp, zp, nxp, nyp, nzp
       use constants,   only : xmax, ymax, zmax, nxg, nyg, nzg
 
@@ -62,7 +62,7 @@ subroutine tau2(xcell, ycell, zcell, delta, taurun, dist)
       smax = min(dsx,dsy,dsz)
 
       if(smax.lt.delta) then
-         tau1 = smax*rhokap(celli,cellj,cellk)
+         ! tau1 = smax*rhokap(celli,cellj,cellk)
          return
       endif
 !***** integrate through grid
@@ -146,7 +146,7 @@ subroutine tau2(xcell, ycell, zcell, delta, taurun, dist)
          if(dz.lt.0.) dcell = min(dx,dy)
 
          d = d + dcell
-         taucell = dcell*rhokap(celli,cellj,cellk)
+         ! taucell = dcell*rhokap(celli,cellj,cellk)
             
 !***** if taurun + taucell<tau then photon moves distance dcell 
 !***** (i.e. ends up on next cell wall) and update photon position
