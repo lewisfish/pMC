@@ -37,7 +37,8 @@ module utils
     !functions to add colour to output via ANSI colour codes
     interface colour
         module procedure colour_char
-        module procedure colour_int
+        module procedure colour_int32
+        module procedure colour_int64
         ! module procedure colour_real4
         module procedure colour_real8
     end interface
@@ -106,37 +107,65 @@ module utils
         end subroutine swap_R8
 
 
-        function str_I32(i)
+        function str_I32(i, len)
 
             use iso_fortran_env, only : Int32
 
             implicit none
 
-            integer(int32), intent(IN) :: i
+            integer(int32),    intent(IN)    :: i
+            integer, optional, intent(IN) :: len
 
             character(len=:), allocatable :: str_I32
             character(len=100) :: string
+            integer            :: lentmp, lenuse
 
             write(string,'(I100.1)') I
 
-            str_I32 = trim(adjustl(string))
+            if(present(len))then
+                lentmp = len_trim(adjustl(string))
+                lenuse = len
+
+                if(len >= lentmp)then
+                    str_I32 = repeat("0", lenuse - lentmp)//trim(adjustl(string))
+                else
+                    str_I32 = trim(adjustl(string))
+                    str_I32 = trim(adjustl(str_I32(:len)))                        
+                end if
+            else
+                str_I32 = trim(adjustl(string))
+            end if
         end function str_I32
 
 
-        function str_I64(i)
+        function str_I64(i, len)
 
             use iso_fortran_env, only : Int64
 
             implicit none
 
-            integer(Int64), intent(IN) :: i
+            integer(int64),    intent(IN)    :: i
+            integer, optional, intent(IN) :: len
 
             character(len=:), allocatable :: str_I64
             character(len=100) :: string
+            integer            :: lentmp, lenuse
 
             write(string,'(I100.1)') I
 
-            str_I64 = trim(adjustl(string))
+            if(present(len))then
+                lentmp = len_trim(adjustl(string))
+                lenuse = len
+
+                if(len >= lentmp)then
+                    str_I64 = repeat("0", lenuse - lentmp)//trim(adjustl(string))
+                else
+                    str_I64 = trim(adjustl(string))
+                    str_I64 = trim(adjustl(str_I64(:len)))                        
+                end if
+            else
+                str_I64 = trim(adjustl(string))
+            end if
         end function str_I64
 
 
@@ -173,19 +202,25 @@ module utils
         ! end function str_r4
 
 
-        function str_R8(i)
+        function str_R8(i, len)
 
             implicit none
 
-            double precision, intent(IN) :: i
+            double precision,  intent(IN) :: i
+            integer, optional, intent(IN) :: len
 
             character(len=:), allocatable :: str_R8
             character(len=100) :: string
 
             write(string,'(f100.16)') I
 
-            str_R8 = trim(adjustl(string))
-        end function str_r8
+            if(present(len))then
+                str_R8 = trim(adjustl(string))
+                str_R8 = trim(adjustl(str_R8(:len)))
+            else
+                str_R8 = trim(adjustl(string))
+            end if
+        end function str_R8
 
 
         function str_R8array(a)
@@ -248,11 +283,13 @@ module utils
         end function colour_char
 
 
-        function colour_int(inte, fmt1, fmt2, fmt3, fmt4, fmt5) result(colourised)
+        function colour_int32(inte, fmt1, fmt2, fmt3, fmt4, fmt5) result(colourised)
+
+            use iso_fortran_env, only : int32
 
             implicit none
 
-            integer,                intent(IN) :: inte
+            integer(kind=int32),    intent(IN) :: inte
             character(*), optional, intent(IN) :: fmt1, fmt2, fmt3, fmt4, fmt5
 
             character(len=:), allocatable :: colourised, string
@@ -273,7 +310,39 @@ module utils
             elseif(present(fmt1))then
                 colourised = start//fmt1//'m'//string//achar(27)//end
             end if
-        end function colour_int
+        end function colour_int32
+
+
+
+
+        function colour_int64(inte, fmt1, fmt2, fmt3, fmt4, fmt5) result(colourised)
+
+            use iso_fortran_env, only : int64
+
+            implicit none
+
+            integer(kind=int64),    intent(IN) :: inte
+            character(*), optional, intent(IN) :: fmt1, fmt2, fmt3, fmt4, fmt5
+
+            character(len=:), allocatable :: colourised, string
+            character(len=50)             :: tmp
+
+            write(tmp,'(I50.1)') inte
+            string = trim(adjustl(tmp))
+            colourised = trim(adjustl(string))
+
+            if(present(fmt1) .and. present(fmt2) .and. present(fmt3) .and. present(fmt4) .and. present(fmt5))then
+                colourised = start//fmt1//';'//fmt2//';'//fmt3//';'//fmt4//';'//fmt5//'m'//string//achar(27)//end
+            elseif(present(fmt1) .and. present(fmt2) .and. present(fmt3) .and. present(fmt4))then
+                colourised = start//fmt1//';'//fmt2//';'//fmt3//';'//fmt4//'m'//string//achar(27)//end
+            elseif(present(fmt1) .and. present(fmt2) .and. present(fmt3))then
+                colourised = start//fmt1//';'//fmt2//';'//fmt3//'m'//string//achar(27)//end
+            elseif(present(fmt1) .and. present(fmt2))then
+                colourised = start//fmt1//';'//fmt2//'m'//string//achar(27)//end
+            elseif(present(fmt1))then
+                colourised = start//fmt1//'m'//string//achar(27)//end
+            end if
+        end function colour_int64
 
 
         ! function colour_real4(inte, fmt1, fmt2, fmt3, fmt4, fmt5) result(colourised)

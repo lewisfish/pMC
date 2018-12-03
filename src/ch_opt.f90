@@ -1,8 +1,8 @@
-MODULE ch_opt
+module ch_opt
 
 implicit none
 
-CONTAINS
+contains
    
    subroutine init_opt1
 !
@@ -68,8 +68,8 @@ CONTAINS
 
    hgg = 0.88
    g2  = hgg**2.
-   mua = 0.01d0
-   mus = 600.d0!13.55d0 / (1. - hgg)
+   mua = 0.0000001d0
+   mus = 0.0000001d0!13.55d0 / (1. - hgg)
 
    kappa  = mus + mua 
    albedo = mus / kappa

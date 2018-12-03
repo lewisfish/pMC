@@ -2,8 +2,6 @@ module subs
 
 implicit none
 
-save
-
     contains
 
         subroutine directory
@@ -40,12 +38,12 @@ save
             zface = 0.
             ! rhokap = 0.
             ! jmean = 0.
-            ! intensity = 0.
+            ! jmeanGLOBAL = 0.
             ! image = 0.
-            ! imaget = 0.
-            ! imagep = 0.
-            ! imagethg = 0.
-            phasor = 0.
+            ! imageGlobal=0.
+
+            phasor = cmplx(0., 0.)
+            phasorGLOBAL = cmplx(0., 0.)
 
         end subroutine zarray
 
@@ -56,7 +54,7 @@ save
         !   
             use iso_fortran_env, only : int64
             use utils,           only : str, mem_free
-            use constants,       only : nxg, nyg, nzg, nbins
+            use constants,       only : nxg, nyg, nzg
             use iarray
 
             implicit none
@@ -85,33 +83,31 @@ save
             ! inquire(iolength=i)rhokap
             ! call chck_mem(cnt, i, limit, 'rhokap', numproc)
 
-            ! allocate(intensity(nxg,nyg,nzg))
-            ! inquire(iolength=i)intensity
-            ! call chck_mem(cnt, i, limit, 'intensity', numproc)
-
-            ! allocate(image(-((Nbins-1)/2):((Nbins-1)/2), -((Nbins-1)/2):((Nbins-1)/2)))
+            ! allocate(image(nxg, nyg))
             ! inquire(iolength=i)image
             ! call chck_mem(cnt, i, limit, 'image', numproc)
 
-            ! allocate(imaget(-((Nbins-1)/2):((Nbins-1)/2), -((Nbins-1)/2):((Nbins-1)/2)))
-            ! inquire(iolength=i)imaget
-            ! call chck_mem(cnt, i, limit, 'imaget', numproc)
+            ! allocate(imageGLOBAL(nxg, nyg))
+            ! inquire(iolength=i)imageGLOBAL
+            ! call chck_mem(cnt, i, limit, 'imageGLOBAL', numproc)
 
-            ! allocate(imagethg(-((Nbins-1)/2):((Nbins-1)/2), -((Nbins-1)/2):((Nbins-1)/2)))
-            ! inquire(iolength=i)imagethg
-            ! call chck_mem(cnt, i, limit, 'imagethg', numproc)
-
-            !       allocate(imagep(-((Nbins-1)/2):((Nbins-1)/2), -((Nbins-1)/2):((Nbins-1)/2)))
-            ! inquire(iolength=i)imagep
-            ! call chck_mem(cnt, i, limit, 'imagep', numproc)
-
-            allocate(phasor(nbins,nbins))
+            allocate(phasor(nxg, nyg, nzg))
             inquire(iolength=i)phasor
             call chck_mem(cnt, i, limit, 'phasor', numproc)
+
+
+            allocate(phasorGLOBAL(nxg, nyg, nzg))
+            inquire(iolength=i)phasorGLOBAL
+            call chck_mem(cnt, i, limit, 'phasorGLOBAL', numproc)
 
             ! allocate(jmean(nxg,nyg,nzg))
             ! inquire(iolength=i)jmean
             ! call chck_mem(cnt, i, limit, 'jmean', numproc)
+
+            ! allocate(jmeanGLOBAL(nxg,nyg,nzg))
+            ! inquire(iolength=i)jmeanGLOBAL
+            ! call chck_mem(cnt, i, limit, 'jmeanGLOBAL', numproc)
+
 
             if(id == 0)print'(A,1X,F5.2,A)','allocated:',dble(cnt)/dble(limit)*100.d0,' % of total RAM'
         end subroutine alloc_array

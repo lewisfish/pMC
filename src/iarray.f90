@@ -1,19 +1,13 @@
-MODULE iarray
+module iarray
 !
 !  Contains all array var names.
 !
-implicit none
-save
+    implicit none
 
-real, allocatable :: xface(:), yface(:), zface(:)
-! real, allocatable :: rhokap(:,:,:)
-! real, allocatable :: image(:,:), imageGLOBAL(:,:)
-! real, allocatable :: imagep(:,:), imagepGLOBAL(:,:)
-
-! real, allocatable :: imaget(:,:), imagetGLOBAL(:,:)
-! real, allocatable :: imagethg(:,:), imagethgGLOBAL(:,:)
-
-! real, allocatable :: jmean(:,:,:), jmeanGLOBAL(:,:,:)
-! real, allocatable :: intensity(:,:,:), intensityGLOBAL(:,:,:)
-real, allocatable :: phasor(:,:), phasorGLOBAL(:,:)
-end MODULE iarray
+    real, allocatable :: xface(:), yface(:), zface(:)
+    ! real, allocatable :: rhokap(:,:,:)
+    ! real, allocatable :: jmean(:,:,:), jmeanGLOBAL(:,:,:)
+    
+    ! complex, allocatable :: image(:,:), imageGLOBAL(:,:)
+    complex, allocatable :: phasor(:,:,:), phasorGLOBAL(:,:,:)
+end module iarray

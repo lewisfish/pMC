@@ -1,9 +1,7 @@
-MODULE opt_prop
+module opt_prop
 
-implicit none
-save
+    implicit none
 
-real    :: mua,mus,g2,hgg,kappa,albedo,wave,n1,n2,wavelength, lambdainpx
-integer :: material
+    real :: mua, mus, g2, hgg, kappa, albedo, wave, n1, n2, wavelength, n
 
-end MODULE opt_prop
+end module opt_prop

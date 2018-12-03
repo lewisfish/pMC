@@ -3,19 +3,19 @@ module inttau2
    implicit none
    
    private
-   public :: tauint1, peeling, find
+   public :: tauint1, find
 
-CONTAINS
+contains
 
     subroutine tauint1(xcell,ycell,zcell,tflag,iseed,delta)
     !optical depth integration subroutine
     !
     !
-        use constants,   only : twopi, pi, xmax, ymax, zmax, nxg, nyg, nzg, beam, nbins, cospim, sinpim, costim, sintim,v,bin_wid
-        use photon_vars, only : xp, yp, zp, phase, angle, zr, nxp, nyp, nzp
-        use iarray,      only : phasor!, rhokap!, jmean!, image, imagep  !intensity
-        use opt_prop,    only : wavelength, lambdaInPx, hgg, g2, kappa
-           use taufind2
+        use constants,   only : xmax, ymax, zmax, fact
+        use photon_vars, only : xp, yp, zp, phase
+        use iarray,      only : phasor
+        use opt_prop,    only : kappa
+        ! use taufind2
 
         implicit none
 
@@ -23,10 +23,10 @@ CONTAINS
         integer, intent(INOUT) :: xcell, ycell, zcell, iseed
         logical, intent(INOUT) :: tflag
 
-real :: tau, taurun, taucell, xcur, ycur, zcur, d, dcell, ran2, r_pos, a, b,z,r,ph,prob, xim, yim, dist,tau3,hgfact,cosa
-        integer                :: celli, cellj, cellk, li, hi, lj, hj, lk, hk, idx, idy
-        logical                :: dir(3)
-        complex :: tmp
+        real    :: tau, taurun, taucell, xcur, ycur, zcur, d, dcell, ran2
+        integer :: celli, cellj, cellk
+        logical :: dir(3)
+        complex :: phasec
 
         xcur = xp + xmax
         ycur = yp + ymax
@@ -42,6 +42,7 @@ real :: tau, taurun, taucell, xcur, ycur, zcur, d, dcell, ran2, r_pos, a, b,z,r,
 
         tau = -log(ran2(iseed))
         do
+  
             dir = (/.FALSE., .FALSE., .FALSE./)
             dcell = wall_dist(celli, cellj, cellk, xcur, ycur, zcur, dir)
             taucell = dcell * kappa!rhokap(celli, cellj, cellk)
@@ -49,42 +50,10 @@ real :: tau, taurun, taucell, xcur, ycur, zcur, d, dcell, ran2, r_pos, a, b,z,r,
                 taurun = taurun + taucell
                 d = d + dcell
 
-                r_pos = sqrt((xcur-xmax)**2.+(ycur-ymax)**2.)
+                phase = phase + dcell
+                phasec = cmplx(cos(fact*phase), sin(fact*phase))
+                phasor(celli,cellj,cellk) = phasor(celli,cellj,cellk) + phasec
 
-                select case (beam)
-                case('bessel')
-                    ph = ((twopi* d)/ wavelength) -(twopi*r_pos/wavelength * sin(angle*pi/180.))
-                case('gaussian')
-                    z = 2.*zmax-zcur
-                    r = z + zr**2/z
-                    ph = (twopi * d/wavelength) + (pi*r_pos**2/r) - atan2(z, zr)
-                case('point')
-                    ph = (twopi * d/wavelength)
-                case default
-                    ph = (twopi * d/wavelength)
-                end select
-
-                
-                phase = cos(ph)
-                ! a = abs(cos(ph))**2.
-
-                if(beam == 'gaussian')then
-                    li = max(1, int(celli - lambdaInPx/2.))
-                    hi = min(nxg, int(celli + lambdaInPx/2.))
-                    lj = max(1, int(cellj - lambdaInPx/2.))
-                    hj = min(nyg, int(cellj + lambdaInPx/2.))
-                    lk = max(1, int(cellk - lambdaInPx/2.))
-                    hk = min(nzg, int(cellk + lambdaInPx/2.))
-
-                    ! phasor(li:hi,lj:hj, lk:hk) = phasor(li:hi,lj:hj, lk:hk) + phase 
-                    ! intensity(li:hi,lj:hj, lk:hk) = intensity(li:hi,lj:hj, lk:hk) + a
-                else
-                    if(cellk == 1)then
-                        idx = floor(xcur/bin_wid)+1
-                        idy = floor(ycur/bin_wid)+1
-                        phasor(idx,idy) = phasor(idx,idy) + (phase)!record phase at bottom of grid
-                    end if
-                end if
 
                 call update_pos(xcur, ycur, zcur, celli, cellj, cellk, dcell, .TRUE., dir, delta)
             else
@@ -92,41 +61,10 @@ real :: tau, taurun, taucell, xcur, ycur, zcur, d, dcell, ran2, r_pos, a, b,z,r,
                 dcell = (tau - taurun) / kappa!rhokap(celli, cellj, cellk)
                 d = d + dcell
                 
-                r_pos = sqrt((xcur-xmax)**2.+(ycur-ymax)**2.)
+                phase = phase + dcell
+                phasec = cmplx(cos(fact*phase), sin(fact*phase))
+                phasor(celli,cellj,cellk) = phasor(celli,cellj,cellk) + phasec
 
-                select case (beam)
-                case('bessel')
-                    ph = ((twopi* d)/ wavelength) -(twopi*r_pos/wavelength * sin(angle*pi/180.))
-                case('gaussian')
-                    z = 2.*zmax-zcur
-                    r = z + zr**2/z
-                    ph = (twopi * d/wavelength) + (pi*r_pos**2/r) - atan2(z, zr)
-                case('point')
-                    ph = (twopi * d/wavelength)
-                case default
-                    ph = (twopi * d/wavelength)
-                end select
-
-                phase = cos(ph)
-
-                if(beam == 'gaussian')then
-                    li = max(1, int(celli - lambdaInPx/2.))
-                    hi = min(nxg, int(celli + lambdaInPx/2.))
-                    lj = max(1, int(cellj - lambdaInPx/2.))
-                    hj = min(nyg, int(cellj + lambdaInPx/2.))
-                    lk = max(1, int(cellk - lambdaInPx/2.))
-                    hk = min(nzg, int(cellk + lambdaInPx/2.))
-
-                    ! phasor(li:hi,lj:hj, lk:hk) = phasor(li:hi,lj:hj, lk:hk) + phase 
-                    ! intensity(li:hi,lj:hj, lk:hk) = intensity(li:hi,lj:hj, lk:hk) + a
-                else
-                    if(cellk == 1)then
-                        idx = floor(xcur/bin_wid)+1
-                        idy = floor(ycur/bin_wid)+1
-                        phasor(idx,idy) = phasor(idx,idy) + (phase)!record phase at bottom of grid
-                    end if
-                end if
-                
                 call update_pos(xcur, ycur, zcur, celli, cellj, cellk, dcell, .FALSE., dir, delta)
                 exit
             end if
@@ -293,177 +231,172 @@ real :: tau, taurun, taucell, xcur, ycur, zcur, d, dcell, ran2, r_pos, a, b,z,r,
 
         real, intent(IN) :: val, a(:)
         integer          :: n, lo, mid, hi
-        logical          :: ascnd
 
         n = size(a)
-        ascnd = (a(n) >= a(1))
         lo = 0
-        hi = n+1
-        do
-            if (hi-lo <= 1) exit
-            mid = (hi+lo)/2
-            if (ascnd .eqv. (val >= a(mid))) then
-                lo = mid
-            else
-                hi = mid
-            end if
-        end do
+        hi = n + 1
 
         if (val == a(1)) then
             find = 1
         else if (val == a(n)) then
             find = n-1
-        else if(ascnd.and. (val > a(n) .or. val < a(1))) then
-            find = -1
-        else if(.not.ascnd.and. (val < a(n) .or. val > a(1))) then
+        else if((val > a(n)) .or. (val < a(1))) then
             find = -1
         else
+            do
+                if (hi-lo <= 1) exit
+                mid = (hi+lo)/2
+                if (val >= a(mid)) then
+                    lo = mid
+                else
+                    hi = mid
+                end if
+            end do
             find = lo
         end if
-
     end function find
 
 
-    subroutine taufind1(xcell,ycell,zcell,delta,taurun)
-    !   routine to find tau from current position to edge of grid in a direction (nxp,nyp,nzp)
-    !
-    !
-        use photon_vars, only : xp, yp, zp
-        ! use iarray,      only : rhokap
-        use opt_prop,    only : wavelength
-        use constants,   only : xmax, ymax, zmax 
+    ! subroutine taufind1(xcell,ycell,zcell,delta,taurun)
+    ! !   routine to find tau from current position to edge of grid in a direction (nxp,nyp,nzp)
+    ! !
+    ! !
+    !     use photon_vars, only : xp, yp, zp
+    !     ! use iarray,      only : rhokap
+    !     use opt_prop,    only : wavelength
+    !     use constants,   only : xmax, ymax, zmax 
      
-        implicit none
+    !     implicit none
 
-        real,    intent(IN)    :: delta
-        integer, intent(INOUT) :: xcell, ycell, zcell
+    !     real,    intent(IN)    :: delta
+    !     integer, intent(INOUT) :: xcell, ycell, zcell
 
-        real                   :: taurun, taucell, xcur, ycur, zcur, d, dcell, tau
-        integer                :: celli, cellj, cellk, iseed
-        logical                :: dir(3),tmp
+    !     real                   :: taurun, taucell, xcur, ycur, zcur, d, dcell, tau
+    !     integer                :: celli, cellj, cellk, iseed
+    !     logical                :: dir(3),tmp
 
-        xcur = xp + xmax
-        ycur = yp + ymax
-        zcur = zp + zmax
+    !     xcur = xp + xmax
+    !     ycur = yp + ymax
+    !     zcur = zp + zmax
 
-        celli = xcell
-        cellj = ycell
-        cellk = zcell
+    !     celli = xcell
+    !     cellj = ycell
+    !     cellk = zcell
 
-        taurun = 0.
-        taucell = 0.
+    !     taurun = 0.
+    !     taucell = 0.
 
-        d = 0.
-        dcell = 0.
+    !     d = 0.
+    !     dcell = 0.
 
-        dir = (/.FALSE., .FALSE., .FALSE./)
-        do
-            dcell = wall_dist(celli, cellj, cellk, xcur, ycur, zcur, dir)
-            ! taucell = dcell * rhokap(celli,cellj,cellk)
+    !     dir = (/.FALSE., .FALSE., .FALSE./)
+    !     do
+    !         dcell = wall_dist(celli, cellj, cellk, xcur, ycur, zcur, dir)
+    !         ! taucell = dcell * rhokap(celli,cellj,cellk)
 
-            taurun = taurun + taucell
-            d = d + dcell
-            call update_pos(xcur, ycur, zcur, celli, cellj, cellk, dcell, .TRUE., dir, delta)
+    !         taurun = taurun + taucell
+    !         d = d + dcell
+    !         call update_pos(xcur, ycur, zcur, celli, cellj, cellk, dcell, .TRUE., dir, delta)
 
-            if(celli == -1 .or. cellj == -1 .or. cellk == -1)then
-                exit
-            end if
-        end do
-    end subroutine taufind1
-
-
-    subroutine tauquick(xcell, ycell, zcell, zp, delta, taurun)
-
-        use constants,   only : nzg, zmax
-        use iarray,      only : zface!,rhokap
-        use opt_prop,    only : material, wavelength
-        use photon_vars, only : nzp
-
-        implicit none
+    !         if(celli == -1 .or. cellj == -1 .or. cellk == -1)then
+    !             exit
+    !         end if
+    !     end do
+    ! end subroutine taufind1
 
 
-        integer, intent(IN)  :: xcell, ycell, zcell
-        real,    intent(IN)  :: zp, delta
-        real,    intent(OUT) :: taurun
+    ! subroutine tauquick(xcell, ycell, zcell, zp, delta, taurun)
 
-        integer :: cellk
-        real    :: tau, dcell, taucell, zcur
+    !     use constants,   only : nzg, zmax
+    !     use iarray,      only : zface!,rhokap
+    !     use opt_prop,    only : wavelength
+    !     use photon_vars, only : nzp
 
-        taurun = 0.
-
-        zcur = zp + zmax
-
-        do cellk = zcell, 1 -1
-
-            dcell = (zface(cellk) - zcur)/nzp
-            ! taucell = dcell * rhokap(xcell, ycell, cellk)
-            taurun = taurun + taucell
-            zcur = zface(cellk) + delta
-        end do
-    end subroutine tauquick
+    !     implicit none
 
 
-    subroutine peeling(xcell,ycell,zcell,delta)
+    !     integer, intent(IN)  :: xcell, ycell, zcell
+    !     real,    intent(IN)  :: zp, delta
+    !     real,    intent(OUT) :: taurun
+
+    !     integer :: cellk
+    !     real    :: tau, dcell, taucell, zcur
+
+    !     taurun = 0.
+
+    !     zcur = zp + zmax
+
+    !     do cellk = zcell, 1 -1
+
+    !         dcell = (zface(cellk) - zcur)/nzp
+    !         ! taucell = dcell * rhokap(xcell, ycell, cellk)
+    !         taurun = taurun + taucell
+    !         zcur = zface(cellk) + delta
+    !     end do
+    ! end subroutine tauquick
+
+
+    ! subroutine peeling(xcell,ycell,zcell,delta)
    
-        ! use iarray,      only : image, imaget, imagethg, imagep
-        use constants,   only : PI, xmax, ymax, zmax, v, costim, sintim, cospim, sinpim, nbins, twopi
-        use photon_vars, only : xp, yp, zp, nxp, nyp, nzp, phase
-        use opt_prop,    only : hgg, g2, wavelength
-        use taufind2
+    !     ! use iarray,      only : image, imaget, imagethg, imagep
+    !     use constants,   only : PI, xmax, ymax, zmax, v, costim, sintim, cospim, sinpim, nbins, twopi
+    !     use photon_vars, only : xp, yp, zp, nxp, nyp, nzp, phase
+    !     use opt_prop,    only : hgg, g2, wavelength
+    !     use taufind2
 
-        implicit none
-
-
-        real,    intent(IN)    :: delta
-        integer, intent(INOUT) :: xcell, ycell, zcell
-        real                   :: cosa, tau1, prob, xim, yim, bin_wid,xpold,ypold
-        real                   :: nxpold, nypold, nzpold, hgfact,zpold, tau3, dist
-        integer                :: binx, biny, xcellold, ycellold, zcellold
+    !     implicit none
 
 
-        nxpold = nxp
-        nypold = nyp
-        nzpold = nzp
-
-        xcellold = xcell
-        ycellold = ycell
-        zcellold = zcell
-
-        xpold = xp
-        ypold = yp
-        zpold = zp
-        cosa = nxp*v(1) + nyp*v(2) + nzp*v(3)!angle of peeled off photon
-
-        nxp = v(1)
-        nyp = v(2)
-        nzp = v(3)
-        xim = yp*cospim - xp*sinpim
-        yim = zp*sintim - yp*costim*sinpim - xp*costim*cospim
-
-        ! call taufind1(xcell, ycell, zcell, delta, tau3)
-        call tau2(xcell,ycell,zcell,delta, tau3, dist)
-
-        bin_wid = 4.*xmax/Nbins
-
-        binx = floor(xim/bin_wid)
-        biny = floor(yim/bin_wid)
+    !     real,    intent(IN)    :: delta
+    !     integer, intent(INOUT) :: xcell, ycell, zcell
+    !     real                   :: cosa, tau1, prob, xim, yim, bin_wid,xpold,ypold
+    !     real                   :: nxpold, nypold, nzpold, hgfact,zpold, tau3, dist
+    !     integer                :: binx, biny, xcellold, ycellold, zcellold
 
 
-        hgfact = (1.-g2) / ((4.*pi)*(1.+g2-2.*hgg*cosa)**(1.5))
+    !     nxpold = nxp
+    !     nypold = nyp
+    !     nzpold = nzp
 
-        prob =  cos(twopi*dist/wavelength) !* tau3 !* hgfact
-        ! image(binx, biny) = image(binx, biny) + prob
-        ! imagep(binx, biny) = imagep(binx, biny) + prob + phase
-        ! imaget(binx, biny) = imaget(binx, biny) + prob*tau3
-        ! imagethg(binx, biny) = imagethg(binx, biny) + prob*tau3*hgfact
+    !     xcellold = xcell
+    !     ycellold = ycell
+    !     zcellold = zcell
 
-        nxp = nxpold
-        nyp = nypold
-        nzp = nzpold
+    !     xpold = xp
+    !     ypold = yp
+    !     zpold = zp
+    !     cosa = nxp*v(1) + nyp*v(2) + nzp*v(3)!angle of peeled off photon
 
-        xcell = xcellold 
-        ycell = ycellold 
-        zcell = zcellold 
+    !     nxp = v(1)
+    !     nyp = v(2)
+    !     nzp = v(3)
+    !     xim = yp*cospim - xp*sinpim
+    !     yim = zp*sintim - yp*costim*sinpim - xp*costim*cospim
 
-    end subroutine peeling
+    !     ! call taufind1(xcell, ycell, zcell, delta, tau3)
+    !     call tau2(xcell,ycell,zcell,delta, tau3, dist)
+
+    !     bin_wid = 4.*xmax/Nbins
+
+    !     binx = floor(xim/bin_wid)
+    !     biny = floor(yim/bin_wid)
+
+
+    !     hgfact = (1.-g2) / ((4.*pi)*(1.+g2-2.*hgg*cosa)**(1.5))
+
+    !     prob =  cos(twopi*dist/wavelength) !* tau3 !* hgfact
+    !     ! image(binx, biny) = image(binx, biny) + prob
+    !     ! imagep(binx, biny) = imagep(binx, biny) + prob + phase
+    !     ! imaget(binx, biny) = imaget(binx, biny) + prob*tau3
+    !     ! imagethg(binx, biny) = imagethg(binx, biny) + prob*tau3*hgfact
+
+    !     nxp = nxpold
+    !     nyp = nypold
+    !     nzp = nzpold
+
+    !     xcell = xcellold 
+    !     ycell = ycellold 
+    !     zcell = zcellold 
+
+    ! end subroutine peeling
 end module inttau2
