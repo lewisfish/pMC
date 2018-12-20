@@ -1,10 +1,11 @@
-50000000  nphotons    run 45 hundred million*8
-0.1d-3        !0.0001               xmax!00072704
-0.1d-3       !0.0001               ymax!00072704
-0.5d-3        !0.0005               zmax
+10000000          nphotons    
+.05d-3            xmax in m
+.05d-3            ymax in m
+.05d-3            zmax in m
 1.0	              n1
 1.38              n2
 bessel            beam
-12.7d-3            raxicon in m
+12.7d-3           raxicon in m
 1.497620101       naxicon 
-11.1d-3            dist_to_skin in m
+10.d-3           dist_to_skin in m
+0                 l - order of bessel beam

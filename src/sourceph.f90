@@ -29,16 +29,16 @@ MODULE sourceph_mod
 
         subroutine bessel(Raxi, d, iseed)
 
-            use constants,   only : nzg, xmax, zmax, ymax,pi
-            use opt_prop,    only : n
-            use photon_vars, only : xp, yp, zp, sint, cost, sinp, cosp, phi, phase, nxp, nyp, nzp
+            use constants,   only : nzg, xmax, zmax, ymax,pi, twopi
+            use opt_prop,    only : n, wavelength
+            use photon_vars, only : xp, yp, zp, sint, cost, sinp, cosp, phi, phase, nxp, nyp, nzp, l
 
             implicit none
 
             integer, intent(INOUT) :: iseed
             real, intent(IN) :: raxi, d
 
-            real :: r_pos, tana, x0, y0, z0, dist
+            real :: r_pos, tana, x0, y0, z0, dist!,a1,r0,f
 
             ! axi_thickness = .11d0 ! 1.1mm
             ! Raxi = 2.54d0/2.d0 !25.4/2mm
@@ -57,8 +57,7 @@ MODULE sourceph_mod
 
             x0 = ranu(-xmax, xmax, iseed)!2.*sqrt(2.)*xmax * ran*sin(37.*pi/180.)!ranu(-xmax, xmax, iseed)
             y0 = ranu(-ymax, ymax, iseed)!2.*sqrt(2.)*xmax * ran*cos(37.*pi/180.)!ranu(-ymax, ymax, iseed)
-
-            z0 = (r_pos* tana) + zp + d !11.1mm
+            z0 = (r_pos* tana) + d + zp!11.1mm
 
             dist = sqrt((x0 - xp)**2 + (y0 - yp)**2 + (z0 - zp)**2)
 
@@ -76,9 +75,20 @@ MODULE sourceph_mod
             cosp = cos(phi)
             sinp = sin(phi)
 
+
             xp = x0
             yp = y0
             zp = zmax - (1.e-5*(2.*zmax/nzg))
+
+            ! A1 = wavelength
+            ! R0 = 1d-3
+            ! f = 10d-3
+
+            phase = phase + l*phi*wavelength/((n - 1.d0)*twopi)  !higher order bessel shizz => helical axicon
+            !airy beam? -(((xp)**2 + (yp)**2)/(2.d0*f))-(10.)*a1*(((xp)**3+(yp)**3)/(r0**3))
+            ! phase = phase + l*modulo(phi, twopi/l)*wavelength/((n - 1.d0)*2.*twopi)  !higher order bessel shizz => helical axicon
+
+           
 
          end subroutine bessel
 

@@ -39,8 +39,8 @@ implicit none
             ! rhokap = 0.
             ! jmean = 0.
             ! jmeanGLOBAL = 0.
-            ! image = 0.
-            ! imageGlobal=0.
+            image = 0.
+            imageGlobal=0.
 
             phasor = cmplx(0., 0.)
             phasorGLOBAL = cmplx(0., 0.)
@@ -79,17 +79,17 @@ implicit none
             inquire(iolength=i)zface
             call chck_mem(cnt, i, limit, 'zface', numproc)
 
-            ! allocate(rhokap(nxg,nyg,nzg))
-            ! inquire(iolength=i)rhokap
-            ! call chck_mem(cnt, i, limit, 'rhokap', numproc)
+            allocate(rhokap(nxg,nyg,nzg))
+            inquire(iolength=i)rhokap
+            call chck_mem(cnt, i, limit, 'rhokap', numproc)
 
-            ! allocate(image(nxg, nyg))
-            ! inquire(iolength=i)image
-            ! call chck_mem(cnt, i, limit, 'image', numproc)
+            allocate(image(nxg, nyg))
+            inquire(iolength=i)image
+            call chck_mem(cnt, i, limit, 'image', numproc)
 
-            ! allocate(imageGLOBAL(nxg, nyg))
-            ! inquire(iolength=i)imageGLOBAL
-            ! call chck_mem(cnt, i, limit, 'imageGLOBAL', numproc)
+            allocate(imageGLOBAL(nxg, nyg))
+            inquire(iolength=i)imageGLOBAL
+            call chck_mem(cnt, i, limit, 'imageGLOBAL', numproc)
 
             allocate(phasor(nxg, nyg, nzg))
             inquire(iolength=i)phasor

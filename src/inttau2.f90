@@ -13,8 +13,8 @@ contains
     !
         use constants,   only : xmax, ymax, zmax, fact
         use photon_vars, only : xp, yp, zp, phase
-        use iarray,      only : phasor
-        use opt_prop,    only : kappa
+        use iarray,      only : phasor, rhokap
+        ! use opt_prop,    only : kappa
         ! use taufind2
 
         implicit none
@@ -45,7 +45,7 @@ contains
   
             dir = (/.FALSE., .FALSE., .FALSE./)
             dcell = wall_dist(celli, cellj, cellk, xcur, ycur, zcur, dir)
-            taucell = dcell * kappa!rhokap(celli, cellj, cellk)
+            taucell = dcell * rhokap(celli, cellj, cellk)
             if(taurun + taucell < tau)then
                 taurun = taurun + taucell
                 d = d + dcell
@@ -58,7 +58,7 @@ contains
                 call update_pos(xcur, ycur, zcur, celli, cellj, cellk, dcell, .TRUE., dir, delta)
             else
 
-                dcell = (tau - taurun) / kappa!rhokap(celli, cellj, cellk)
+                dcell = (tau - taurun) /rhokap(celli, cellj, cellk)
                 d = d + dcell
                 
                 phase = phase + dcell
@@ -209,16 +209,22 @@ contains
     !updates the current voxel based upon position
     !
     !
-        use iarray, only : xface, yface, zface
+        ! use iarray, only : xface, yface, zface
+        use constants, only : xmax, ymax, zmax, nxg, nyg, nzg
 
         implicit none
 
         real,    intent(IN)    :: xcur, ycur, zcur
         integer, intent(INOUT) :: celli, cellj, cellk
 
-        celli = find(xcur, xface) 
-        cellj = find(ycur, yface)
-        cellk = find(zcur, zface) 
+        celli = floor(nxg * (xcur) / (2. * xmax)) + 1!find(xcur, xface) 
+        cellj = floor(nyg * (ycur) / (2. * ymax)) + 1!find(ycur, yface)
+        cellk = floor(nzg * (zcur) / (2. * zmax)) + 1!find(zcur, zface) 
+
+        if(celli > nxg .or. celli < 1)celli = -1
+        if(cellj > nyg .or. cellj < 1)cellj = -1
+        if(cellk > nzg .or. cellk < 1)cellk = -1
+
 
     end subroutine update_voxels
 

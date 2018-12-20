@@ -30,12 +30,10 @@ program mcpolar
 
     !mpi variables
     integer :: id, error, numproc
-    real    :: nscattGLOBAL,ran2
+    real    :: nscattGLOBAL
 
     call MPI_init(error)
-
     call MPI_Comm_size(MPI_COMM_WORLD, numproc, error)
-
     call MPI_Comm_rank(MPI_COMM_WORLD, id, error)
 
     !set directory paths
@@ -58,15 +56,16 @@ program mcpolar
     read(10,*) raxi
     read(10,*) n
     read(10,*) dtoskin
+    read(10,*) l
     close(10)
 
-    iseed = -876535443 + id
+    iseed = -123456879 + id
     iseed = -abs(iseed+id)  ! Random number seed must be negative for ran2
 
     holdseed = iseed
 
     call init_opt4
-    wavelength = 1435.e-9
+    wavelength = 488.e-9
     fact = twopi/wavelength
     tana=tan(5.d0*pi/180.d0)
 
@@ -89,7 +88,7 @@ program mcpolar
     call cpu_time(start2)
     !loop over photons 
     call MPI_Barrier(MPI_COMM_WORLD, error)
-    print*,'Photons now running on core: ',colour(id, green)
+    print*,'Photons now running on core: ',colour(id, str(30+mod(id,7)), bold)
     do j = 1 , nphotons
 
         call init_opt4
@@ -121,7 +120,9 @@ program mcpolar
         !***** Release photon from point source *******************************
         call sourceph(xcell,ycell,zcell,raxi, dtoskin, iseed)
 
-        ! image(xcell, ycell) = image(xcell, ycell) + cmplx(cos((phase * fact)), sin(phase * fact))
+
+
+        image(xcell, ycell) = image(xcell, ycell) + cmplx(cos((phase * fact)), sin(phase * fact))
 
 
         !****** Find scattering location
@@ -132,24 +133,24 @@ program mcpolar
         do while(tflag.eqv..FALSE.)
             ! ran = ran2(iseed)
 
-            if(ran2(iseed) < 0.)then!interacts with tissue
+            ! if(ran2(iseed) < 0.)then!interacts with tissue
             !       ! call stokes(iseed)
             !       ! nscatt = nscatt + 1        
-               else
-                  tflag=.true.
+               ! else
+                  tflag = .true.
                   exit
-            end if
+            ! end if
 
             !************ Find next scattering location
 
-            call tauint1(xcell,ycell,zcell,tflag,iseed,delta)
+            ! call tauint1(xcell,ycell,zcell,tflag,iseed,delta)
             ! if(.not. tflag)call peeling(xcell,ycell,zcell,delta)
 
         end do
 
     end do      ! end loop over nph photons
 
-    ! call mpi_reduce(image, imageGLOBAL, size(image), mpi_double_complex, mpi_sum, 0, mpi_comm_world, error)
+    call mpi_reduce(image, imageGLOBAL, size(image), mpi_double_complex, mpi_sum, 0, mpi_comm_world, error)
     call mpi_reduce(phasor, phasorGLOBAL, size(phasor), mpi_double_complex, mpi_sum, 0, mpi_comm_world, error)
 
     call cpu_time(finish)
@@ -163,6 +164,14 @@ program mcpolar
     if(id == 0)then
         print*,'Average # of scatters per photon:',nscattGLOBAL/(nphotons*numproc)
         !write out files
+
+        ! open(newunit=u,file="bessel-l"//str(int(l))//"-int.dat",access="stream",form="unformatted",status="replace")
+        ! write(u)abs(imageGLOBAL)**2
+        ! close(u)
+
+        ! open(newunit=u,file="bessel-l"//str(int(l))//"-phase.dat",access="stream",form="unformatted",status="replace")
+        ! write(u)real(imageGLOBAL)
+        ! close(u)
 
         call writer(nphotons, numproc)
         print*,colour('write done',black,white_b,bold)

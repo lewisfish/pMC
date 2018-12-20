@@ -6,9 +6,9 @@ module gridset_mod
         subroutine gridset(id)
 
             use constants, only : nxg, nyg, nzg, xmax, ymax, zmax
-            use iarray,    only : xface, yface, zface!, rhokap
+            use iarray,    only : xface, yface, zface, rhokap
             use ch_opt,    only : init_opt4
-            ! use opt_prop,  only : kappa
+            use opt_prop,  only : kappa
 
             implicit none
 
@@ -43,19 +43,19 @@ module gridset_mod
                         z = zface(k)-zmax+zmax/nzg
                         !***********Call density setup subroutine
                         
-                        ! if(i >= 45 .and. i<= 55)then
-                        !    if(j >= 45 .and. j<= 55)then
-                        !       if(k >= 150 .and. k<= 175)then
-                        !          rhokap(i,j,k)=1.d20
-                        !       else
-                        !          rhokap(i,j,k)=kappa
-                        !       end if
-                        !    else
-                        !       rhokap(i,j,k)=kappa
-                        !    end if
-                        ! else
-                        !    rhokap(i,j,k)=kappa
-                        ! end if
+                        if(i >= 47 .and. i<= 52)then
+                           if(j >= 47 .and. j<= 52)then
+                              if(k >= 170 .and. k <= 180)then
+                                 rhokap(i,j,k)=1.d20
+                              else
+                                 rhokap(i,j,k)=kappa
+                              end if
+                           else
+                              rhokap(i,j,k)=kappa
+                           end if
+                        else
+                           rhokap(i,j,k)=kappa
+                        end if
                     end do
                 end do
             end do

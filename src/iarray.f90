@@ -5,9 +5,9 @@ module iarray
     implicit none
 
     real, allocatable :: xface(:), yface(:), zface(:)
-    ! real, allocatable :: rhokap(:,:,:)
+    real, allocatable :: rhokap(:,:,:)
     ! real, allocatable :: jmean(:,:,:), jmeanGLOBAL(:,:,:)
-    
-    ! complex, allocatable :: image(:,:), imageGLOBAL(:,:)
+
+    complex, allocatable :: image(:,:), imageGLOBAL(:,:)
     complex, allocatable :: phasor(:,:,:), phasorGLOBAL(:,:,:)
 end module iarray
