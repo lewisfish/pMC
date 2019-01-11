@@ -1,0 +1,23 @@
+{
+	"folders":
+	[
+		{
+			"path": ".",
+            "name": "Source",
+            "file_exclude_patterns": ["*.mod","a.out"]
+		},
+        {
+            "path": "../res",
+            "name": "Resources"
+        },
+        {
+            "path": "../data",
+            "name": "Data",
+            "file_exclude_patterns": ["*.mod","a.out"]
+        }
+	],
+    "settings":
+    {
+        "tab_size": 4
+    }
+}

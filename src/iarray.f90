@@ -8,6 +8,7 @@ module iarray
     real, allocatable :: rhokap(:,:,:)
     ! real, allocatable :: jmean(:,:,:), jmeanGLOBAL(:,:,:)
 
-    complex, allocatable :: image(:,:), imageGLOBAL(:,:)
+    complex, allocatable :: imaget(:,:), imagetGLOBAL(:,:)
+    complex, allocatable :: imageb(:,:), imagebGLOBAL(:,:)
     complex, allocatable :: phasor(:,:,:), phasorGLOBAL(:,:,:)
 end module iarray

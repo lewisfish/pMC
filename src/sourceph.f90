@@ -18,8 +18,8 @@ MODULE sourceph_mod
             integer,          intent(INOUT) :: iseed
             real, intent(IN) :: raxi, dtoskin
 
-            call bessel(raxi, dtoskin, iseed)
-           
+            ! call bessel(raxi, dtoskin, iseed)
+            call gaussian(iseed)
 
             xcell = int(nxg * (xp + xmax) / (2. * xmax)) + 1
             ycell = int(nyg * (yp + ymax) / (2. * ymax)) + 1
@@ -93,145 +93,187 @@ MODULE sourceph_mod
          end subroutine bessel
 
 
-        ! subroutine gaussian_phase(iseed)
-        ! ! f => focal length of lens
-        ! ! zr => rayleigh length
-        ! ! zf => z location of of the focus
+        subroutine gaussian(iseed)
+
+            use constants,   only : xmax, ymax, zmax, nzg
+            use photon_vars, only : xp, yp, zp, phase, nxp, nyp, nzp, sint, cost, sinp, cosp, phi
+            use inttau2,     only : reflect_refract
+
+            use vector_class
+
+            implicit none
+
+            integer, intent(INOUT) :: iseed
+
+            real         :: radius, n2, n1, LensMaxt, t, dist, x0, y0, z0, tmp, focald, Pplane
+            logical      :: rflag
+            type(vector) :: I, N, dir, orig, centre, phit, nhit, lensF
+
+            ! thor labs conve planar lens:LA4249
+            ! n from @500nm https://www.filmetrics.com/refractive-index-database/SiO2/Fused-Silica-Silicon-Dioxide-Thermal-Oxide-ThermalOxide
+
+            radius   = 4.6d-3   ! radius of sphere that defines the convex part of lens
+            n2       = 1.4585d0  ! refractive index of lens @ 587.6nm
+            n1       = 1.d0     ! refractive index of ambient medium
+            LensMaxt = 2.2d-3   ! lens thickness at thickest part
+            focald = 1.d0/((n2-1.d0)*(1.d0/radius))
+            Pplane = LensMaxt / n2
+
+!                                      
+!                    --|                    
+!                   /  |                    
+!                  /   |                    
+!------------------    |                    
+!                / \   |                    
+!               /   \  |
+!              |     \ |                 
+!              |      \|--------------------
+!               \      |                    
+!                \     |                    
+!                 \    |                    
+!                  \   |
+!                   \  |
+!                    --|
+!              0       LensMaxt   
 
 
-        !     use constants,   only : pi, nzg, zmax, twopi, xmax
-        !     use photon_vars, only : nxp, nyp, nzp, xp,yp,zp, phase,zr
-        !     use opt_prop,    only : wavelength
+            ! pull photon portion from gaussian dist
+            call rang(xp, yp, 0.d0, 1.d-3/4.d0, iseed)
+            ! init pos of photon
+            orig = vector(xp, yp, -1.5d-3)
+            ! init dir of photon. Towards lens
+            dir = vector(0.d0, 0.d0, 1.d0)
+            ! pos of len, based upon where centre of lens defining sphere is
+            centre = vector(0.d0, 0.d0, radius)
 
-        !     implicit none
+            ! get intersection pos as function of t
+            rflag = intersect(orig, dir, t, centre, radius)
+            ! get real pos of intersection
+            phit = orig + t*dir
+            ! get normal at intersection for reflection/refraction
+            nhit = (phit - centre)
+            nhit = nhit%magnitude()
 
-        !     integer, intent(INOUT) :: iseed
-        !     real :: ran2,w
-        !     real :: xo, yo, zo, zf, f, fact, rz,  D, wo, r1, phigauss, r_pos
+            I = dir
+            I = I%magnitude()
+            N = nhit
+            rflag = .false.
 
+            ! do fresnel calculation
+            call reflect_refract(I, N, n1, n2, iseed, rflag)
 
-        !     w = 0.0000000015
-        !     zf = zmax-.01
-        !     zo = zmax - (1.e-5*(2.*zmax/nzg))
-        !     xo = 0.
+            dir = I
+            dist = (LensMaxt - phit%z) / I%z
+            !pos on lens, planar side
+            lensF = phit + dist * dir
 
-        !     f = zmax/2000.
-        !     D = 6.e-8
-        !     wo = (2./pi) * (wavelength*f)/D
-        !     zr = (pi * wo**2)/wavelength
-        !     ! print*,wo,zr
-        !     !gaussian beam via box-muller method
-        !     do
-        !         r1 = w*sqrt(-2.*log(ran2(iseed)))
-        !         phigauss = twopi * ran2(iseed)
-        !         xo = r1 * cos(phigauss)
-        !         yo = r1 * sin(phigauss)
-        !         if(xo**2 + yo**2 < xmax**2.)exit
-        !     end do
+            ! draw x, y randomly on surface of medium
+            x0 = ranu(-xmax, xmax, iseed)
+            y0 = ranu(-ymax, ymax, iseed)
+            ! set z on surface of medium
+            z0 = LensMaxt + (focald - Pplane) - zmax   ! lens thickness + mechanical focal length - half medium size, so that focal point falls in middle of medium
 
-        !     xp = -xo*((zo - zf)/sqrt(xo**2 + yo**2 + f**2)) 
-        !     yp = -yo*((zo - zf)/sqrt(xo**2 + yo**2 + f**2)) 
-        !     zp = zf + f*((zo - zf)/sqrt(xo**2 + yo**2 + f**2)) 
+            !get distance from lens surface to surface of medium
+            tmp = sqrt((x0 - lensF%x)**2 + (y0 - lensF%y)**2 + (z0 - lensF%z)**2)
 
-        !     rz = -(zp - zf) * (1 + (zr / (zp - zf))**2)
+            ! dist travelled in air before lens + distance travelled in lens + distance to surface of medium
+            phase = phit%z + dist*n2 + tmp
+            
 
-        !     fact = 1./sqrt(1 + ((xp**2 + yp**2) / rz**2))
+            nxp = (x0 - lensF%x) / tmp
+            nyp = (y0 - lensF%y) / tmp
+            nzp = -abs((z0 - lensF%z) / tmp) !-ive due to way z pos is defined in MCRT code
 
-        !     nxp = fact * (xp/rz)
-        !     nyp = fact * (yp/rz)
-        !     nzp = -1. * fact
+            cost = nzp
+            sint = sqrt(1.d0 - cost**2)
 
-        !     r_pos = sqrt(xp**2 + yp**2)
-        !     phase = (twopi*(abs(zp-zo)+r_pos)/wavelength)
-        !     zp = zo
+            phi = atan2(nyp, nxp)
 
-        ! end subroutine gaussian_phase
+            cosp = cos(phi)
+            sinp = sin(phi)
 
-
-        ! subroutine circular(radius, iseed)
-
-        !     use constants, only : nzg, zmax
-        !     use photon_vars, only : xp, yp, zp, sint, cost, sinp, cosp, phi, phase
-
-        !     implicit none
-
-        !     real,    intent(IN)    :: radius
-        !     integer, intent(INOUT) :: iseed
-
-        !     real :: ran2
-
-        !     zp = zmax - (1.e-5*(2.*zmax/nzg))
-
-        !     do
-        !        xp = 2. * radius * ran2(iseed) - radius
-        !        yp = 2. * radius * ran2(iseed) - radius
-        !        if(xp**2 + yp **2 <= radius**2)exit
-        !     end do
-
-        !     cost = -1.
-        !     sint = 1. - cost**2.
-
-        !     phi = 0.
-        !     cosp = cos(phi)
-        !     sinp = sin(phi)
-
-        !     phase = 0.
-
-        ! end subroutine circular
+            xp = x0
+            yp = y0
+            zp = zmax - (1.e-5*(2.*zmax/nzg))
+        end subroutine gaussian
 
 
-        ! subroutine point(x, y , iseed)
+        logical function solveQuadratic(a, b, c, x0, x1)
+        ! solves quadratic equation given coeffs a, b, and c
+        ! returns true if real soln
+        ! returns x0 and x1
+        ! adapted from scratchapixel
 
-        !     use constants,   only : nzg, zmax, twopi
-        !     use photon_vars, only : xp, yp, zp, phi, cosp, sinp, cost, sint, phase
+            implicit none
 
-        !     implicit none
+            real, intent(IN)  :: a, b, c
+            real, intent(OUT) :: x0, x1
 
-        !     real,    intent(IN)    :: x, y
-        !     integer, intent(INOUT) :: iseed
+            real :: discrim, q
 
-        !     real :: ran2
+            solveQuadratic = .false.
 
-        !     zp = zmax - (1.e-5*(2.*zmax/nzg))
+            discrim = b**2 - 4.d0 * a * c
+            if(discrim < 0.d0)then
+                return
+            elseif(discrim == 0.d0)then
+                x0 = -0.5*b/a
+                x1 = x0
+            else
+                if(b > 0.d0)then
+                    q = -0.5d0 * (b + sqrt(discrim))
+                else
+                    q = -0.5d0 * (b - sqrt(discrim))
+                end if
+                x0 = q / a
+                x1 = c / q
+            end if
+            solveQuadratic = .true.
+            return
 
-        !     xp = x
-        !     yp = y
-
-        !     cost = 2. * ran2(iseed) - 1.
-        !     sint = sqrt(1. - cost * cost) 
-
-        !     phi = twopi * ran2(iseed)
-        !     cosp = cos(phi)
-        !     sinp = sin(phi)
-
-        !     phase = 0.
-
-        ! end subroutine point
+        end function solveQuadratic
 
 
-        ! subroutine uniform(iseed)
+        logical function intersect(orig, dir, t, centre, radius)
+        ! calculates where a line, with origin:orig and direction:dir hits a sphere, centre:centre and radius:radius
+        ! returns true if intersection exists
+        ! returns t, the paramertised parameter of the line equation
+        ! adapted from scratchapixel
+            
+            use vector_class, only : vector
 
-        !     use photon_vars, only : phi, phase, cost, sint, cosp, sinp, xp, yp, zp
-        !     use constants,   only : xmax, ymax, zmax, nzg
+            implicit none
 
-        !     implicit none
+            type(vector), intent(IN)  :: dir, orig, centre
+            real,         intent(OUT) :: t
+            real,         intent(IN)  :: radius
 
-        !     integer, intent(INOUT) :: iseed
-        !     real :: ran2
+            type(vector) :: L
+            real         :: t0, t1, a, b, c, tmp
 
-        !     zp = zmax - (1.e-5*(2.*zmax/nzg))
-        !     xp = 2. * xmax * ran2(iseed) - xmax
-        !     yp = 2. * ymax * ran2(iseed) - xmax
+            intersect = .false.
 
-        !     cost = -1.
-        !     sint = 1. - cost**2.
+            L = orig - centre
+            a = dir .dot. dir
+            b = 2.d0 * (dir .dot. L)
+            c = (l .dot. l) - radius**2
 
-        !     phi = 0.
-        !     cosp = cos(phi)
-        !     sinp = sin(phi)
+            if(.not. solveQuadratic(a, b, c, t0, t1))return
+            if(t0 > t1)then
+                tmp = t1
+                t1 = t0
+                t0 = tmp
+            end if
+            if(t0 < 0.d0)then
+                t0 = t1
+                if(t0 < 0.)return
+            end if
 
-        !     phase = 0.
-        ! end subroutine uniform
+            t = t0
+            intersect = .true.
+            return
+
+        end function intersect
 
 
         subroutine rang(x, y, avg, sigma, iseed)
@@ -255,7 +297,7 @@ MODULE sourceph_mod
             tmp = x*sqrt(-2.*log(s)/s)
             x = avg + sigma*tmp
 
-           tmp = y*sqrt(-2.*log(s)/s)
+            tmp = y*sqrt(-2.*log(s)/s)
             y = avg + sigma*tmp
 
         end subroutine rang

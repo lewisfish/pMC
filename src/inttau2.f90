@@ -3,7 +3,7 @@ module inttau2
    implicit none
    
    private
-   public :: tauint1, find
+   public :: tauint1, find, peeling, reflect_refract
 
 contains
 
@@ -13,7 +13,7 @@ contains
     !
         use constants,   only : xmax, ymax, zmax, fact
         use photon_vars, only : xp, yp, zp, phase
-        use iarray,      only : phasor, rhokap
+        use iarray,      only : rhokap, phasor
         ! use opt_prop,    only : kappa
         ! use taufind2
 
@@ -342,67 +342,227 @@ contains
     ! end subroutine tauquick
 
 
-    ! subroutine peeling(xcell,ycell,zcell,delta)
+    subroutine peeling(xcell,ycell,zcell,delta)
    
-    !     ! use iarray,      only : image, imaget, imagethg, imagep
-    !     use constants,   only : PI, xmax, ymax, zmax, v, costim, sintim, cospim, sinpim, nbins, twopi
-    !     use photon_vars, only : xp, yp, zp, nxp, nyp, nzp, phase
-    !     use opt_prop,    only : hgg, g2, wavelength
-    !     use taufind2
+        use iarray,      only : imageb
+        use constants,   only : v, costim, sintim, cospim, sinpim, twopi, fact, pi, xmax, nxg, zmax, imgsize, ymax, pixels
+        use photon_vars, only : xp, yp, zp, nxp, nyp, nzp, phase
+        use opt_prop,    only : wavelength, hgg, g2
+        use taufind2
 
-    !     implicit none
-
-
-    !     real,    intent(IN)    :: delta
-    !     integer, intent(INOUT) :: xcell, ycell, zcell
-    !     real                   :: cosa, tau1, prob, xim, yim, bin_wid,xpold,ypold
-    !     real                   :: nxpold, nypold, nzpold, hgfact,zpold, tau3, dist
-    !     integer                :: binx, biny, xcellold, ycellold, zcellold
+        implicit none
 
 
-    !     nxpold = nxp
-    !     nypold = nyp
-    !     nzpold = nzp
+        real,    intent(IN)    :: delta
+        integer, intent(INOUT) :: xcell, ycell, zcell
+        real                   :: cosa, prob, xim, yim, xpold,ypold, hgfact, binwid
+        real                   :: nxpold, nypold, nzpold,zpold, tau3, dist, phaseold
+        integer                :: binx, biny, xcellold, ycellold, zcellold
 
-    !     xcellold = xcell
-    !     ycellold = ycell
-    !     zcellold = zcell
+        integer :: i, j
+        real :: xpnew, ypnew, zpnew, phi
 
-    !     xpold = xp
-    !     ypold = yp
-    !     zpold = zp
-    !     cosa = nxp*v(1) + nyp*v(2) + nzp*v(3)!angle of peeled off photon
+        nxpold = nxp
+        nypold = nyp
+        nzpold = nzp
 
-    !     nxp = v(1)
-    !     nyp = v(2)
-    !     nzp = v(3)
-    !     xim = yp*cospim - xp*sinpim
-    !     yim = zp*sintim - yp*costim*sinpim - xp*costim*cospim
+        xcellold = xcell
+        ycellold = ycell
+        zcellold = zcell
 
-    !     ! call taufind1(xcell, ycell, zcell, delta, tau3)
-    !     call tau2(xcell,ycell,zcell,delta, tau3, dist)
+        phaseold = phase
 
-    !     bin_wid = 4.*xmax/Nbins
+        xpold = xp
+        ypold = yp
+        zpold = zp
 
-    !     binx = floor(xim/bin_wid)
-    !     biny = floor(yim/bin_wid)
+        zpnew = -zmax
+        do i = 1, 100
+            xpnew = (i*(imgsize/real(pixels))) + (xmax-0.5d0*imgsize)
+            do j = 1, 100
+                ypnew = (j*(imgsize/real(pixels))) + (ymax-0.5d0*imgsize)
+                ! print*,xpnew,ypnew
+
+                dist = sqrt((xpnew - xpold)**2 + (ypnew - ypold)**2 + (zpnew - zpold)**2)
+
+                ! v(1) = (xpnew - xp) / dist
+                ! v(2) = (ypnew - yp) / dist
+                ! v(3) = (zpnew - zp) / dist
+
+                ! phi = atan2(nyp, nxp)
+
+                ! cospim = cos(phi)
+                ! sinpim = sin(phi)
+                ! costim = nzp
+                ! sintim = sqrt(1.d0 - costim**2)
+
+                ! cosa = nxp*v(1) + nyp*v(2) + nzp*v(3)!angle of peeled off photon
+                ! nxp = v(1)
+                ! nyp = v(2)
+                ! nzp = v(3)
+                ! xim = yp*cospim - xp*sinpim
+                ! yim = zp*sintim - yp*costim*sinpim - xp*costim*cospim
+
+                ! call tau2(xcell,ycell,zcell,delta, tau3, dist)
+
+                ! hgfact = (1.-g2) / ((4.*pi)*(1.+g2-2.*hgg*cosa)**(1.5))
+
+                prob =  1.!exp(-tau3) !* hgfact
+                phase = phase + dist
+                imageb(i, j) = imageb(i, j) + cmplx(prob * cos((phase * fact)), prob * sin(phase * fact))
+            end do
+        end do
 
 
-    !     hgfact = (1.-g2) / ((4.*pi)*(1.+g2-2.*hgg*cosa)**(1.5))
 
-    !     prob =  cos(twopi*dist/wavelength) !* tau3 !* hgfact
-    !     ! image(binx, biny) = image(binx, biny) + prob
-    !     ! imagep(binx, biny) = imagep(binx, biny) + prob + phase
-    !     ! imaget(binx, biny) = imaget(binx, biny) + prob*tau3
-    !     ! imagethg(binx, biny) = imagethg(binx, biny) + prob*tau3*hgfact
 
-    !     nxp = nxpold
-    !     nyp = nypold
-    !     nzp = nzpold
+        ! call taufind1(xcell, ycell, zcell, delta, tau3)
+        ! call tau2(xcell,ycell,zcell,delta, tau3, dist)
 
-    !     xcell = xcellold 
-    !     ycell = ycellold 
-    !     zcell = zcellold 
+        ! binwid = 2.*xmax / real(nxg)
 
-    ! end subroutine peeling
+        ! binx = floor(xim/binwid)
+        ! biny = floor(yim/binwid)
+
+        ! print*,binx,biny
+        ! hgfact = (1.-g2) / ((4.*pi)*(1.+g2-2.*hgg*cosa)**(1.5))
+
+        ! prob =  exp(-tau3) !* tau3 !* hgfact
+        ! phase = phase + dist
+        ! image(binx, biny) = image(binx, biny) + cmplx(prob * cos((phase * fact)), prob * sin(phase * fact))
+
+        ! imagep(binx, biny) = imagep(binx, biny) + prob + phase
+        ! imaget(binx, biny) = imaget(binx, biny) + prob*tau3
+        ! imagethg(binx, biny) = imagethg(binx, biny) + prob*tau3*hgfact
+
+        nxp = nxpold
+        nyp = nypold
+        nzp = nzpold
+
+        xp = xpold
+        yp = ypold
+        zp = zpold
+
+        phase = phaseold
+
+        xcell = xcellold 
+        ycell = ycellold 
+        zcell = zcellold 
+
+    end subroutine peeling
+
+        subroutine reflect_refract(I, N, n1, n2, iseed, rflag)
+
+            use vector_class
+
+            implicit none
+
+            type(vector), intent(INOUT) :: I
+            type(vector), intent(INOUT) :: N
+            real,         intent(IN)    :: n1, n2
+            integer,      intent(INOUT) :: iseed
+            logical,      intent(OUT)   :: rflag
+
+            real :: ran2
+
+            rflag = .FALSE.
+
+            ! if(ran2(iseed) <= fresnel(I, N, n1, n2))then
+            !     call reflect(I, N)
+            !     rflag = .true.
+            ! else
+                call refract(I, N, n1/n2)
+            ! end if
+
+        end subroutine reflect_refract
+
+
+        subroutine reflect(I, N)
+        !   get vector of reflected photon
+        !
+        !
+            use vector_class
+
+            implicit none
+
+            type(vector), intent(INOUT) :: I
+            type(vector), intent(IN)    :: N
+
+            type(vector) :: R
+
+            R = I - 2. * (N .dot. I) * N
+            I = R
+
+        end subroutine reflect
+
+
+        subroutine refract(I, N, eta)
+        !   get vector of refracted photon
+        !
+        !
+            use vector_class
+
+            implicit none
+
+            type(vector), intent(INOUT) :: I
+            type(vector), intent(IN)    :: N
+            real,         intent(IN)    :: eta
+
+            type(vector) :: T, Ntmp
+
+            real :: c1, c2
+
+            Ntmp = N
+
+            c1 = (Ntmp .dot. I)
+            if(c1 < 0.)then
+                c1 = -c1
+            else
+                Ntmp = (-1.) * N
+            end if
+            c2 = sqrt(1. - (eta)**2 * (1.-c1**2))
+
+            T = eta*I + (eta * c1 - c2) * Ntmp 
+
+            I = T
+
+        end subroutine refract
+
+
+        function fresnel(I, N, n1, n2) result (tir)
+        !   calculates the fresnel coefficents
+        !
+        !
+            use vector_class
+            use ieee_arithmetic, only : ieee_is_nan
+
+            implicit none
+
+            real, intent(IN)         :: n1, n2
+            type(vector), intent(IN) :: I, N
+
+            real             ::  costt, sintt, sint2, cost2, tir, f1, f2
+
+            costt = abs(I .dot. N)
+
+            sintt = sqrt(1. - costt * costt)
+            sint2 = n1/n2 * sintt
+            if(sint2 > 1.)then
+                tir = 1.0
+                return
+            elseif(costt == 1.)then
+                tir = 0.
+                return
+            else
+                sint2 = (n1/n2)*sintt
+                cost2 = sqrt(1. - sint2 * sint2)
+                f1 = abs((n1*costt - n2*cost2) / (n1*costt + n2*cost2))**2
+                f2 = abs((n1*cost2 - n2*costt) / (n1*cost2 + n2*costt))**2
+
+                tir = 0.5 * (f1 + f2)
+            if(ieee_is_nan(tir) .or. tir > 1. .or. tir < 0.)print*,'TIR: ', tir, f1, f2, costt,sintt,cost2,sint2
+                return
+            end if
+        end function fresnel
+
 end module inttau2

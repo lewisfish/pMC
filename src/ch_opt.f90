@@ -69,7 +69,7 @@ contains
    hgg = 0.88
    g2  = hgg**2.
    mua = 0.0000001d0
-   mus = 0.0000001d0!13.55d0 / (1. - hgg)
+   mus = 1.d-10!13.55d0 / (1. - hgg)
 
    kappa  = mus + mua 
    albedo = mus / kappa

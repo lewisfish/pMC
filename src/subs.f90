@@ -39,8 +39,10 @@ implicit none
             ! rhokap = 0.
             ! jmean = 0.
             ! jmeanGLOBAL = 0.
-            image = 0.
-            imageGlobal=0.
+            imaget = 0.
+            imagetGlobal=0.
+            ! imageb = 0.
+            ! imagebGlobal=0.
 
             phasor = cmplx(0., 0.)
             phasorGLOBAL = cmplx(0., 0.)
@@ -83,13 +85,21 @@ implicit none
             inquire(iolength=i)rhokap
             call chck_mem(cnt, i, limit, 'rhokap', numproc)
 
-            allocate(image(nxg, nyg))
-            inquire(iolength=i)image
-            call chck_mem(cnt, i, limit, 'image', numproc)
+            allocate(imaget(nxg, nyg))
+            inquire(iolength=i)imaget
+            call chck_mem(cnt, i, limit, 'imaget', numproc)
 
-            allocate(imageGLOBAL(nxg, nyg))
-            inquire(iolength=i)imageGLOBAL
-            call chck_mem(cnt, i, limit, 'imageGLOBAL', numproc)
+            allocate(imagetGLOBAL(nxg, nyg))
+            inquire(iolength=i)imagetGLOBAL
+            call chck_mem(cnt, i, limit, 'imagetGLOBAL', numproc)
+
+            ! allocate(imageb(nxg, nyg))
+            ! inquire(iolength=i)imageb
+            ! call chck_mem(cnt, i, limit, 'imageb', numproc)
+
+            ! allocate(imagebGLOBAL(nxg, nyg))
+            ! inquire(iolength=i)imagebGLOBAL
+            ! call chck_mem(cnt, i, limit, 'imagebGLOBAL', numproc)
 
             allocate(phasor(nxg, nyg, nzg))
             inquire(iolength=i)phasor

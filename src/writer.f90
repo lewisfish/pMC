@@ -17,9 +17,9 @@ module writer_mod
 
             use iarray,          only : phasorGLOBAL
             use utils,           only : str
-            use constants,       only : xmax, ymax, zmax, nzg, nyg, nxg
+            ! use constants,       only : xmax, ymax, zmax, nzg, nyg, nxg
             use iso_fortran_env, only : int64
-            use photon_vars,     only : l
+            ! use photon_vars,     only : l
 
             implicit none
 
@@ -29,9 +29,7 @@ module writer_mod
             character(len=256)  :: filename
 
 
-            filename = 'jmean/besseltest1-l'//str(l,1)//'-'//str(nphotons*numproc)//"-"//&
-                        str(xmax,6)//"-"//str(ymax,6)//"-"//str(zmax,6)//"-"//&
-                        str(nxg)//"-"//str(nyg)//"-"//str(nzg)//'.raw'
+            filename = 'jmean/gaussian1111.raw'
             
             call write_binary(trim(filename), abs(phasorGLOBAL)**2)
             print*,trim(filename)

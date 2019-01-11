@@ -1,11 +1,13 @@
 10000000          nphotons    
-.05d-3            xmax in m
-.05d-3            ymax in m
-.05d-3            zmax in m
+.025d-3            xmax in m
+.025d-3            ymax in m
+.5d-3            zmax in m
 1.0	              n1
 1.38              n2
 bessel            beam
 12.7d-3           raxicon in m
 1.497620101       naxicon 
-10.d-3           dist_to_skin in m
+10.d-3            dist_to_skin in m
 0                 l - order of bessel beam
+.1d-3             imgsize
+1d-6              pixres      

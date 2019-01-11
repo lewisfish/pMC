@@ -23,10 +23,12 @@ program mcpolar
     implicit none
 
     integer(kind=int64) :: nphotons, j
-    integer :: iseed, xcell, ycell, zcell, holdseed
+    integer :: iseed, xcell, ycell, zcell, holdseed, u, idx, idy
     logical :: tflag
-    real    :: nscatt, raxi, dtoskin, binwid
-    real    :: delta, start, finish, start2, finish2, tmp
+    real    :: nscatt, raxi, dtoskin, binwid, ran2
+    real    :: delta, start, finish, start2, finish2, tmp, phiim, thetaim
+
+    real    :: pixres
 
     !mpi variables
     integer :: id, error, numproc
@@ -45,31 +47,55 @@ program mcpolar
 
 
     !**** Read in parameters from the file input.params
-    open(10,file=trim(resdir)//'input.params',status='old')
-    read(10,*) nphotons
-    read(10,*) xmax
-    read(10,*) ymax
-    read(10,*) zmax
-    read(10,*) n1
-    read(10,*) n2
-    read(10,*) beam
-    read(10,*) raxi
-    read(10,*) n
-    read(10,*) dtoskin
-    read(10,*) l
-    close(10)
+    open(newunit=u,file=trim(resdir)//'input.params',status='old')
+    read(u,*) nphotons
+    read(u,*) xmax
+    read(u,*) ymax
+    read(u,*) zmax
+    read(u,*) n1
+    read(u,*) n2
+    read(u,*) beam
+    read(u,*) raxi
+    read(u,*) n
+    read(u,*) dtoskin
+    read(u,*) l
+    read(u,*) imgsize
+    read(u,*) pixres
+
+    close(u)
 
     iseed = -123456879 + id
     iseed = -abs(iseed+id)  ! Random number seed must be negative for ran2
 
     holdseed = iseed
 
+    phiim   = 0. * pi/180.
+    thetaim = 180. * pi/180.
+
+
+    !image postion vector
+    !angle for vector
+    costim = cos(thetaim)
+    sintim = sin(thetaim)
+    sinpim = sin(phiim)
+    cospim = cos(phiim)
+
+    !vector
+    v(1) = sintim * cospim     
+    v(2) = sintim * sinpim
+    v(3) = costim      
+
     call init_opt4
     wavelength = 488.e-9
     fact = twopi/wavelength
     tana=tan(5.d0*pi/180.d0)
 
-    binwid = 2.*xmax / real(nxg)
+    binwid = pixres
+    pixels = imgsize/binwid
+    allocate(imageb(pixels, pixels))
+    allocate(imagebGLOBAL(pixels, pixels))
+
+    !2.*xmax / real(nxg)
     if(id == 0)then
         print*, ''      
         print*,'# of photons to run',nphotons*int(numproc,kind=int64)
@@ -92,7 +118,7 @@ program mcpolar
     do j = 1 , nphotons
 
         call init_opt4
-
+        phase = 0.d0
         tflag=.FALSE.
 
         if(j == 100000 .and. id == 0)then
@@ -113,7 +139,7 @@ program mcpolar
             print*,' '
         end if
 
-        if(mod(j,10000000_int64) == 0)then
+        if(mod(j,1000000_int64) == 0)then
             print *, colour(j, blue, bold),' scattered photons completed on core: ',colour(id, str(30+mod(id,7)), bold)
         end if
 
@@ -122,36 +148,47 @@ program mcpolar
 
 
 
-        image(xcell, ycell) = image(xcell, ycell) + cmplx(cos((phase * fact)), sin(phase * fact))
+        imaget(xcell, ycell) = imaget(xcell, ycell) + cmplx(cos((phase * fact)), sin(phase * fact))
 
 
         !****** Find scattering location
-
         call tauint1(xcell,ycell,zcell,tflag,iseed,delta)
 
         !******** Photon scatters in grid until it exits (tflag=TRUE) 
         do while(tflag.eqv..FALSE.)
-            ! ran = ran2(iseed)
 
-            ! if(ran2(iseed) < 0.)then!interacts with tissue
-            !       ! call stokes(iseed)
-            !       ! nscatt = nscatt + 1        
-               ! else
+            ! if(ran2(iseed) < albedo)then!interacts with tissue
+            !       call stokes(iseed)
+            !       nscatt = nscatt + 1        
+            !    else
                   tflag = .true.
                   exit
             ! end if
 
-            !************ Find next scattering location
+            ! !************ Find next scattering location
 
             ! call tauint1(xcell,ycell,zcell,tflag,iseed,delta)
             ! if(.not. tflag)call peeling(xcell,ycell,zcell,delta)
 
         end do
+        ! stop
+        if(xcell /= -1 .and. ycell /= -1 .and. tflag)then
+            if(abs(xp) <= imgsize/2. .and. abs(yp) <= imgsize/2.)then
+                ! print*,xp+xmax,yp+xmax,xcell,ycell
+                idx = floor(((xp + xmax) - (2.*xmax-imgsize)/2.)/binwid) + 1
+                idy = floor(((yp + ymax) - (2.*xmax-imgsize)/2.)/binwid) + 1
+                ! print*,idx,idy
+                imageb(idx, idy) = imageb(idx, idy) + cmplx(cos((phase * fact)), sin(phase * fact))
+            end if
+        end if
 
     end do      ! end loop over nph photons
 
-    call mpi_reduce(image, imageGLOBAL, size(image), mpi_double_complex, mpi_sum, 0, mpi_comm_world, error)
+    call mpi_reduce(imaget, imagetGLOBAL, size(imaget), mpi_double_complex, mpi_sum, 0, mpi_comm_world, error)
+    call mpi_reduce(imageb, imagebGLOBAL, size(imageb), mpi_double_complex, mpi_sum, 0, mpi_comm_world, error)
     call mpi_reduce(phasor, phasorGLOBAL, size(phasor), mpi_double_complex, mpi_sum, 0, mpi_comm_world, error)
+
+    call mpi_reduce(nscatt, nscattGLOBAL, 1, mpi_double, mpi_sum, 0, mpi_comm_world, error)
 
     call cpu_time(finish)
     if(finish-start.ge.60.)then
@@ -165,9 +202,13 @@ program mcpolar
         print*,'Average # of scatters per photon:',nscattGLOBAL/(nphotons*numproc)
         !write out files
 
-        ! open(newunit=u,file="bessel-l"//str(int(l))//"-int.dat",access="stream",form="unformatted",status="replace")
-        ! write(u)abs(imageGLOBAL)**2
-        ! close(u)
+        open(newunit=u,file="bessel-l"//str(int(l))//"-top-int-test.dat",access="stream",form="unformatted",status="replace")
+        write(u)abs(imagetGLOBAL)**2
+        close(u)
+
+        open(newunit=u,file="bessel-l"//str(int(l))//"-bot-int-test.dat",access="stream",form="unformatted",status="replace")
+        write(u)abs(imagebGLOBAL)**2
+        close(u)
 
         ! open(newunit=u,file="bessel-l"//str(int(l))//"-phase.dat",access="stream",form="unformatted",status="replace")
         ! write(u)real(imageGLOBAL)
