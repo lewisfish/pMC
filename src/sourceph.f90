@@ -218,9 +218,9 @@ MODULE sourceph_mod
             radlens = 9.936d-3 / 2.d0
 
             call rang(xi, yi, 0.d0, 1.d-3/4.d0, iseed)
-            zi = focalBack + lensThickness + 10.d-3
+            zi = focalBack + lensThickness + 2.*zmax
             ! do i = 1, 1000
-            zi = focalBack + lensThickness + .5d-3
+            ! zi = focalBack + lensThickness + .5d-3
             call rang(xi, yi, 0.d0, 1.d-3/4.d0, iseed)
             orig = vector(xi, yi, zi)
             dirI = vector(0.d0, 0.d0, -1.d0)

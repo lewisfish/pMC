@@ -1,7 +1,7 @@
 2500000          nphotons    
 .05d-3            xmax in m
 .05d-3            ymax in m
-.25d-3            zmax in m
+.1d-3            zmax in m
 1.0	              n1
 1.38              n2
 bessel            beam
