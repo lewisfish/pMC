@@ -205,12 +205,12 @@ MODULE sourceph_mod
             logical :: flag
             integer :: i
 
-
+            ! do i = 1, 1000
             !thor labs lens 354220-C
-            as = [4.789735d-7, 4.049692d-9, 3.128181d-11, -6.498699d-13, 0.d0]
+            as = [4.789735d-4, 4.049692d-6, 3.128181d-8, -6.498699d-10, 0.d0]
             k = -0.925522
-            lensThickness = .434d-3
-            focalBack = 3.9d-3
+            lensThickness = 3.434d-3
+            focalBack = 5.9d-3
             R = 4.638124d-3
             n1 = 1.d0
             n2 = 1.586d0
@@ -219,24 +219,23 @@ MODULE sourceph_mod
 
             call rang(xi, yi, 0.d0, 1.d-3/4.d0, iseed)
             zi = focalBack + lensThickness + 10.d-3
-            do i = 1, 1000
+            ! do i = 1, 1000
             zi = focalBack + lensThickness + .5d-3
             call rang(xi, yi, 0.d0, 1.d-3/4.d0, iseed)
             orig = vector(xi, yi, zi)
             dirI = vector(0.d0, 0.d0, -1.d0)
-            print*,orig
 
             centre = vector(0.d0, 0.d0, (focalBack + lensThickness) - R)
-
+            ! print*,orig
             zi = focalBack + lensThickness ! @ plane from where sag is defined
 
             zadj = aspheric(sqrt(xi**2+yi**2), R, k, as)
             zi = zi - zadj
 
             lensI = vector(xi, yi, zi) !on front surface of lens
-            print*,lensI
+            ! print*,lensI
             !!get normal
-            N = grad_aspher(xi, yi, R, k, as)
+            N = grad(lensI%x, lensI%y, R, k, as, .9d-3)!grad_aspher(xi, yi, R, k, as)
 
 
             dirL = dirI
@@ -249,11 +248,7 @@ MODULE sourceph_mod
                 error stop "neg distance"
             end if
             lensF = lensI + distLens*dirL !@ lend face back
-            print*,lensF
-            print*,
-            print*,
-        end do
-        stop
+            ! print*,lensF
                   
             final = vector(ranu(-xmax, xmax, iseed), ranu(-ymax, ymax, iseed), zmax - (1.e-5*(2.*zmax/nzg))) !@ in medium
 
@@ -277,9 +272,12 @@ MODULE sourceph_mod
             yp = final%y
             zp = final%z
 
-            phase = distAir + distLens*n2 + (orig%z - lensI%z)
-
-
+            phase = distAir + distLens*n2 + zadj !(orig%z - lensI%z)
+            ! print*,xp,yp,zp
+            ! print*,
+            ! print*,
+        ! end do
+        ! stop
         end subroutine gaussian_aspeheric
 
 
@@ -303,8 +301,29 @@ MODULE sourceph_mod
         end function aspheric
 
 
-        type(vector) function grad(x, y,)
+        type(vector) function grad(x, y, radcurve, k, as, step)
 
+            implicit none
+
+            real, intent(IN) :: x, y, radcurve, k, as(:), step
+            real :: rdiffplus, r, dx, dy, dz, rdiffminus
+
+            r = sqrt(x**2 + y**2)
+            rdiffplus = sqrt((x + step)**2 + y**2)
+            rdiffminus = sqrt((x - step)**2 + y**2)
+
+           
+            dx = (aspheric(rdiffplus, radcurve, k, as) - aspheric(rdiffminus, radcurve, k, as)) / (2.*step)
+            r = sqrt(x**2 + y**2)
+            rdiffplus = sqrt((y + step)**2 + x**2)
+            rdiffminus = sqrt((y - step)**2 + x**2)
+            dy = (aspheric(rdiffplus, radcurve, k, as) - aspheric(rdiffminus, radcurve, k, as)) / (2.*step)
+            dz = -1.d0
+
+            grad = vector(-dx, -dy, dz)
+            grad = grad%magnitude()
+
+        end function grad
 
         type(vector) function grad_aspher(x, y, R, k, as)
 

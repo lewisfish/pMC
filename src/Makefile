@@ -34,12 +34,12 @@ build:	FCFLAGS += $(FCBUILD)
 build:	$(PROGRAM)
 
 $(PROGRAM):	$(OBJECTS)
-	@$(FCOMP) $(FCFLAGS) -o $@ $^ 
+	$(FCOMP) $(FCFLAGS) -o $@ $^ 
 
 %.o:  %.f90
-	@$(FCOMP)  $(FCFLAGS) -c $<
+	$(FCOMP)  $(FCFLAGS) -c $<
 
 .PHONY:	clean
 
 clean:
-	@rm -f *.o *.mod *.MOD mcgrid
+	rm -f *.o *.mod *.MOD mcgrid

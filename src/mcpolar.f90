@@ -86,7 +86,7 @@ program mcpolar
     v(3) = costim      
 
     call init_opt4
-    wavelength = 587.6d-9!7.6e-9
+    wavelength = 780.d-9!587.6d-9!7.6e-9
     fact = twopi/wavelength
     tana=tan(5.d0*pi/180.d0)
 
@@ -97,8 +97,8 @@ program mcpolar
 
     !2.*xmax / real(nxg)
     if(id == 0)then
-        ! print*, ''      
-        ! print*,'# of photons to run',nphotons*int(numproc,kind=int64)
+        print*, ''      
+        print*,'# of photons to run',nphotons*int(numproc,kind=int64)
     end if
 
     !***** Set up density grid *******************************************
@@ -114,7 +114,7 @@ program mcpolar
     call cpu_time(start2)
     !loop over photons 
     call MPI_Barrier(MPI_COMM_WORLD, error)
-    ! print*,'Photons now running on core: ',colour(id, str(30+mod(id,7)), bold)
+    print*,'Photons now running on core: ',colour(id, str(30+mod(id,7)), bold)
     do j = 1 , nphotons
 
         call init_opt4
@@ -179,7 +179,7 @@ program mcpolar
                 ! idy = floor(((yp + ymax) - (2.*xmax-imgsize)/2.)/binwid) + 1
                 ! print*,idx,idy
                 ! print*,xcell,ycell
-                imageb(xcell, ycell) = imageb(xcell, ycell) + cmplx(cos((phase * fact)), sin(phase * fact))
+                ! imageb(xcell, ycell) = imageb(xcell, ycell) + cmplx(cos((phase * fact)), sin(phase * fact))
             ! end if
         end if
 
