@@ -12,7 +12,7 @@ contains
     !
     !
         use constants,   only : xmax, ymax, zmax, fact
-        use photon_vars, only : xp, yp, zp, phase
+        use photon_vars, only : xp, yp, zp, phase, initp
         use iarray,      only : rhokap, phasor
         ! use opt_prop,    only : kappa
         ! use taufind2
@@ -52,7 +52,7 @@ contains
 
                 phase = phase + dcell
                 phasec = cmplx(cos(fact*phase), sin(fact*phase))
-                phasor(celli,cellj,cellk) = phasor(celli,cellj,cellk) + phasec
+                phasor(celli,cellj,cellk) = phasor(celli,cellj,cellk) + phasec*initp
 
 
                 call update_pos(xcur, ycur, zcur, celli, cellj, cellk, dcell, .TRUE., dir, delta)
@@ -63,7 +63,7 @@ contains
                 
                 phase = phase + dcell
                 phasec = cmplx(cos(fact*phase), sin(fact*phase))
-                phasor(celli,cellj,cellk) = phasor(celli,cellj,cellk) + phasec
+                phasor(celli,cellj,cellk) = phasor(celli,cellj,cellk) + phasec*initp
 
                 call update_pos(xcur, ycur, zcur, celli, cellj, cellk, dcell, .FALSE., dir, delta)
                 exit

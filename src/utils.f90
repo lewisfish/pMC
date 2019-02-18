@@ -402,23 +402,64 @@ module utils
 
 
         function mem_free()
+        ! func that returns amount of free memory
+        ! should be portable across most linux systems
+        ! returns memory available in b
 
             use iso_fortran_env, only : int64 !as numbers are large
 
             implicit none
 
-            integer(int64) :: mem_free
+            integer(int64) :: mem_free, available, pagecache, active, inactive, sreclaimable, freeram
 
-            integer(int64)    :: i
+            integer(int64)    :: i, low
             character(len=15) :: tmp
-            integer           :: u
+            integer           :: u, io
+
+
+            open(newunit=u,file='/proc/zoneinfo',status='old')
+            low = 0
+            do 
+                read(u,*, iostat=io)tmp, i
+                if(IS_IOSTAT_END(io))exit
+                if(verify(trim(tmp), 'low') == 0)then
+                    low = low + i
+                end if
+            end do
+            close(u)
 
             open(newunit=u,file='/proc/meminfo',status='old')
+            mem_free = 0
+            do 
+                read(u,*,iostat=io)tmp, i
+                if(IS_IOSTAT_END(io))exit
 
-            read(u,*)tmp, i
-            read(u,*)tmp, i
-            read(u,*)tmp, i
-            
-            mem_free = i * 1024_int64 !convert from Kib to b 
+                if(verify(trim(tmp), 'MemAvailable:') == 0)then
+                    mem_free = i * 1024_int64
+                    return!return early if MemAvailable availble on OS. Else do calculation for MemAvailable
+                end if
+                if(verify(trim(tmp), 'MemFree:') == 0)then
+                    freeram = i
+                end if
+                if(trim(tmp) == 'Active(file):' )then
+                    active = i
+                end if
+                if(verify(tmp, 'Inactive(file):') == 0)then
+                    inactive = i
+                end if
+                if(trim(tmp) == 'SReclaimable:')then
+                    sreclaimable = i
+                end if
+            end do
+            close(u)
+
+            !algorithm from kernal source
+        !https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=34e431b0ae398fc54ea69ff85ec700722c9da773
+            available = freeram - low
+            pagecache = active + inactive
+            pagecache = pagecache - min(pagecache/2, low)
+            available = available + pagecache
+            available = available + (sreclaimable - min(sreclaimable/2, low))
+            mem_free = available * 1024_int64 !convert from Kib to b
         end function mem_free
 end module utils

@@ -1,7 +1,8 @@
 MODULE sourceph_mod
 
+    use vector_class, only : vector, magnitude
+
     implicit none
-    save
 
     private
     public :: sourceph
@@ -19,11 +20,16 @@ MODULE sourceph_mod
             real, intent(IN) :: raxi, dtoskin
 
             ! call bessel(raxi, dtoskin, iseed)
-            call gaussian(iseed)
-
+            ! do
+            ! call gaussian_plano(iseed)
+            call gaussian_aspeheric(iseed)
             xcell = int(nxg * (xp + xmax) / (2. * xmax)) + 1
             ycell = int(nyg * (yp + ymax) / (2. * ymax)) + 1
             zcell = int(nzg * (zp + zmax) / (2. * zmax)) + 1
+            ! print*,xcell,ycell,zcell,nzg
+            ! if(xcell <= nxg .and. ycell <= nyg .and. zcell <= nzg)exit
+            ! end do
+            ! stop
         end subroutine sourceph
 
 
@@ -93,11 +99,12 @@ MODULE sourceph_mod
          end subroutine bessel
 
 
-        subroutine gaussian(iseed)
+        subroutine gaussian_plano(iseed)
 
-            use constants,   only : xmax, ymax, zmax, nzg
-            use photon_vars, only : xp, yp, zp, phase, nxp, nyp, nzp, sint, cost, sinp, cosp, phi
+            use constants,   only : xmax, ymax, zmax, nzg, pi
+            use photon_vars, only : xp, yp, zp, phase, nxp, nyp, nzp, sint, cost, sinp, cosp, phi, initp
             use inttau2,     only : reflect_refract
+ 
 
             use vector_class
 
@@ -105,98 +112,252 @@ MODULE sourceph_mod
 
             integer, intent(INOUT) :: iseed
 
-            real         :: radius, n2, n1, LensMaxt, t, dist, x0, y0, z0, tmp, focald, Pplane
-            logical      :: rflag
-            type(vector) :: I, N, dir, orig, centre, phit, nhit, lensF
+            real :: xi, yi, zi, focalBack, lensThickness, R, t, ZL, n1, n2, distLens, distAir, radlens, thetamin, thetamax, dist,c
+            real :: ran2
+            type(vector) :: orig, dirI, centre, lensI, N, dirL, lensF, final, dirF, dir
+            logical :: flag
 
-            ! thor labs conve planar lens:LA4249
-            ! n from @500nm https://www.filmetrics.com/refractive-index-database/SiO2/Fused-Silica-Silicon-Dioxide-Thermal-Oxide-ThermalOxide
+            lensThickness = 2.2d-3
+            focalBack = 8.5d-3
+            R = 4.6d-3
+            n1 = 1.d0
+            n2 = 1.4585d0
+            centre = vector(0.d0, 0.d0, (focalBack + lensThickness) - R)
+            radlens = 2.5d-3
 
-            radius   = 4.6d-3   ! radius of sphere that defines the convex part of lens
-            n2       = 1.4585d0  ! refractive index of lens @ 587.6nm
-            n1       = 1.d0     ! refractive index of ambient medium
-            LensMaxt = 2.2d-3   ! lens thickness at thickest part
-            focald = 1.d0/((n2-1.d0)*(1.d0/radius))
-            Pplane = LensMaxt / n2
+            zi = focalBack + lensThickness + 2.*zmax
+            ! do
+            call rang(xi, yi, 0.d0, 1.d-3/4.d0, iseed)
+                ! if(sqrt(xi**2 + yi**2) > radlens)then
+                !     cycle
+                ! else
+                    ! exit
+                ! end if
+            ! end do
+            orig = vector(xi, yi, zi)
+            dirI = vector(0.d0, 0.d0, -1.d0)
 
-!                                      
-!                    --|                    
-!                   /  |                    
-!                  /   |                    
-!------------------    |                    
-!                / \   |                    
-!               /   \  |
-!              |     \ |                 
-!              |      \|--------------------
-!               \      |                    
-!                \     |                    
-!                 \    |                    
-!                  \   |
-!                   \  |
-!                    --|
-!              0       LensMaxt   
+            if(.not. intersect(orig, dirI, t, centre, R))error stop "No lens intersection!"
+            lensI = orig + t*dirI
 
+            N = (lensI - centre)
+            N = N%magnitude()
+            ! print*,N
+            dirL = dirI
 
-            ! pull photon portion from gaussian dist
-            call rang(xp, yp, 0.d0, 1.d-3/4.d0, iseed)
-            ! init pos of photon
-            orig = vector(xp, yp, -1.5d-3)
-            ! init dir of photon. Towards lens
-            dir = vector(0.d0, 0.d0, 1.d0)
-            ! pos of len, based upon where centre of lens defining sphere is
-            centre = vector(0.d0, 0.d0, radius)
+            call reflect_refract(dirL, N, n1, n2, iseed, flag)
 
-            ! get intersection pos as function of t
-            rflag = intersect(orig, dir, t, centre, radius)
-            ! get real pos of intersection
-            phit = orig + t*dir
-            ! get normal at intersection for reflection/refraction
-            nhit = (phit - centre)
-            nhit = nhit%magnitude()
+            zL = focalBack
+            distLens = (zL - lensI%z) / (dirL%z)
+            ! print*,zl, lensI%z, dirL%z
 
-            I = dir
-            I = I%magnitude()
-            N = nhit
-            rflag = .false.
+            if(distLens < 0.d0)then
+                print*,zl, lensI%z, dirL%z
+                error stop "Negative distance travelled in lens!"
+            end if
+            lensF = lensI + distLens*dirL
 
-            ! do fresnel calculation
-            call reflect_refract(I, N, n1, n2, iseed, rflag)
+            final = vector(ranu(-xmax, xmax, iseed), ranu(-ymax, ymax, iseed), zmax - (1.e-5*(2.*zmax/nzg)))
 
-            dir = I
-            dist = (LensMaxt - phit%z) / I%z
-            !pos on lens, planar side
-            lensF = phit + dist * dir
+            distAir = sqrt((final%x - LensF%x)**2 + (final%y - LensF%y)**2 + (final%z - LensF%z)**2)
 
-            ! draw x, y randomly on surface of medium
-            x0 = ranu(-xmax, xmax, iseed)
-            y0 = ranu(-ymax, ymax, iseed)
-            ! set z on surface of medium
-            z0 = LensMaxt + (focald - Pplane) - zmax   ! lens thickness + mechanical focal length - half medium size, so that focal point falls in middle of medium
+            dirF = (final - lensF) / distAir
 
-            !get distance from lens surface to surface of medium
-            tmp = sqrt((x0 - lensF%x)**2 + (y0 - lensF%y)**2 + (z0 - lensF%z)**2)
+            nxp = dirF%x
+            nyp = dirF%y
+            nzp = dirF%z
+            if(nzp > 0.d0)error stop
 
-            ! dist travelled in air before lens + distance travelled in lens + distance to surface of medium
-            phase = phit%z + dist*n2 + tmp
-            
-
-            nxp = (x0 - lensF%x) / tmp
-            nyp = (y0 - lensF%y) / tmp
-            nzp = -abs((z0 - lensF%z) / tmp) !-ive due to way z pos is defined in MCRT code
+            phi = atan2(nyp, nxp)
+            cosp = cos(phi)
+            sinp = sin(phi)
 
             cost = nzp
             sint = sqrt(1.d0 - cost**2)
 
-            phi = atan2(nyp, nxp)
+            xp = final%x
+            yp = final%y
+            zp = final%z
 
+            phase = distAir + distLens*n2 + (orig%z - lensI%z)
+
+            initp = (1.+abs(cost))/2.
+
+        end subroutine gaussian_plano
+
+
+        subroutine gaussian_aspeheric(iseed)
+
+            use constants,   only : xmax, ymax, zmax, nzg
+            use photon_vars, only : xp, yp, zp, phase, nxp, nyp, nzp, sint, cost, sinp, cosp, phi
+            use inttau2,     only : reflect_refract
+ 
+
+            use vector_class
+
+            implicit none
+
+            integer, intent(INOUT) :: iseed
+
+    real :: xi, yi, zi, focalBack, lensThickness, R, t, ZL, n1, n2, distLens, distAir, radlens, as(5),k,ti(3)
+            real :: zadj, l0, m0, n0, g0,c,s0,z0,z0bar,e,E1,c1,L,m12,ml2,p2,f,fdash,g
+            type(vector) :: orig, dirI, centre, lensI, N, dirL, lensF, final, dirF
+            logical :: flag
+            integer :: i
+
+
+            !thor labs lens 354220-C
+            as = [4.789735d-7, 4.049692d-9, 3.128181d-11, -6.498699d-13, 0.d0]
+            k = -0.925522
+            lensThickness = .434d-3
+            focalBack = 3.9d-3
+            R = 4.638124d-3
+            n1 = 1.d0
+            n2 = 1.586d0
+
+            radlens = 9.936d-3 / 2.d0
+
+            call rang(xi, yi, 0.d0, 1.d-3/4.d0, iseed)
+            zi = focalBack + lensThickness + 10.d-3
+            do i = 1, 1000
+            zi = focalBack + lensThickness + .5d-3
+            call rang(xi, yi, 0.d0, 1.d-3/4.d0, iseed)
+            orig = vector(xi, yi, zi)
+            dirI = vector(0.d0, 0.d0, -1.d0)
+            print*,orig
+
+            centre = vector(0.d0, 0.d0, (focalBack + lensThickness) - R)
+
+            zi = focalBack + lensThickness ! @ plane from where sag is defined
+
+            zadj = aspheric(sqrt(xi**2+yi**2), R, k, as)
+            zi = zi - zadj
+
+            lensI = vector(xi, yi, zi) !on front surface of lens
+            print*,lensI
+            !!get normal
+            N = grad_aspher(xi, yi, R, k, as)
+
+
+            dirL = dirI
+            call reflect_refract(dirL, N, n1, n2, iseed, flag)
+
+            zL = focalBack
+            distLens = (zL - lensI%z) / dirL%z
+ 
+            if(distLens < 0.d0)then
+                error stop "neg distance"
+            end if
+            lensF = lensI + distLens*dirL !@ lend face back
+            print*,lensF
+            print*,
+            print*,
+        end do
+        stop
+                  
+            final = vector(ranu(-xmax, xmax, iseed), ranu(-ymax, ymax, iseed), zmax - (1.e-5*(2.*zmax/nzg))) !@ in medium
+
+            distAir = sqrt((final%x - LensF%x)**2 + (final%y - LensF%y)**2 + (final%z - LensF%z)**2)
+
+            dirF = (final - lensF) / distAir
+
+            nxp = dirF%x
+            nyp = dirF%y
+            nzp = dirF%z
+            if(nzp > 0.d0)error stop
+
+            phi = atan2(nyp, nxp)
             cosp = cos(phi)
             sinp = sin(phi)
 
-            xp = x0
-            yp = y0
-            zp = zmax - (1.e-5*(2.*zmax/nzg))
-        end subroutine gaussian
+            cost = nzp
+            sint = sqrt(1.d0 - cost**2)
 
+            xp = final%x
+            yp = final%y
+            zp = final%z
+
+            phase = distAir + distLens*n2 + (orig%z - lensI%z)
+
+
+        end subroutine gaussian_aspeheric
+
+
+        real function aspheric(rad, radcurve, k, as)
+
+            implicit none
+
+            real, intent(IN) :: as(:), radcurve, k, rad
+
+            integer :: i, n
+
+            n = size(as)
+
+            !$\frac{Y^2}{R\left(1+\sqrt{1-(1+k)\frac{Y^2}{R^2}}\right)}$
+            aspheric = (rad**2) / (radcurve * (1.d0 + sqrt(1.d0 - (1.d0 + k)) * (rad / radcurve)**2))
+
+            do i = 1, n
+                aspheric = aspheric + as(i)*rad**(2*n+2)
+            end do
+
+        end function aspheric
+
+
+        type(vector) function grad(x, y,)
+
+
+        type(vector) function grad_aspher(x, y, R, k, as)
+
+            implicit none
+
+            real, intent(IN) :: x, y, as(:), R, k
+            real :: x1, x2, x3, x4, y1, y2, y3, y4
+            real :: x3top, x3bot1, x3bot2, x4top, x4bot1, x4bot2
+            real :: y3top, y3bot1, y3bot2, y4top, y4bot1, y4bot2
+
+            grad_aspher = vector(0.d0, 0.d0, 0.d0)
+
+            x1 = 4.d0*as(1)*x*(x**2+y**2)
+
+            x2 = 6.d0*as(2)*x*(x**2+y**2)**2 + 8.d0*as(3)*x*(x**2+y**2)**3 + 10.d0*as(4)*x*(x**2+y**2)**4
+
+            x3top = (1.d0+k)*x*sqrt(x**2+y**2)
+            x3bot1 = R**3*sqrt(1.d0 - (((1.d0+k)*(x**2+y**2))/R**2))
+            x3bot2 = (1.d0+sqrt(1.d0 - (((1.d0+k)*(x**2+y**2))/R**2)))**2
+
+            x3 = x3top / (x3bot1 * x3bot2)
+
+            x4top = x
+            x4bot1 = R*sqrt(x**2+y**2) 
+            x4bot2 = (1.d0+sqrt(1.d0 - (((1.d0+k)*(x**2+y**2))/R**2)))
+
+            x4 = x4top / (x4bot1 * x4bot2)
+
+            grad_aspher%x = (x1 + x2 - x3 - x4)
+
+
+            y1 = 4.d0*as(1)*y*(x**2+y**2)
+            y2 = 6.d0*as(2)*y*(x**2+y**2)**2 + 8.d0*as(3)*y*(x**2+y**2)**3 + 10.d0*as(4)*y*(x**2+y**2)**4
+
+            y3top = (1.d0+k)*y*sqrt(x**2+y**2)
+            y3bot1 = R**3*sqrt(1.d0 - (((1.d0+k)*(x**2+y**2))/R**2))
+            y3bot2 = (1.d0+sqrt(1.d0 - (((1.d0+k)*(x**2+y**2))/R**2)))**2
+
+            y3 = y3top / (y3bot1 * y3bot2)
+
+            y4top = y
+            y4bot1 = R*sqrt(x**2+y**2) 
+            y4bot2 = (1.d0+sqrt(1.d0 - (((1.d0+k)*(x**2+y**2))/R**2)))
+
+            y4 = y4top / (y4bot1 * y4bot2)
+
+            grad_aspher%y = (y + y2 - y3 - y4)
+
+            grad_aspher%z = -1.d0
+
+            grad_aspher = grad_aspher%magnitude()
+
+        end function grad_aspher
 
         logical function solveQuadratic(a, b, c, x0, x1)
         ! solves quadratic equation given coeffs a, b, and c
@@ -318,3 +479,68 @@ MODULE sourceph_mod
         end function ranu
 
 end MODULE sourceph_mod
+
+            ! real :: xi, yi, zi, R, t, n1, n2, lensThickness, zl, xl, yl, distLens, distAir, backfocal
+            ! type(vector) :: posi, diri, centre, lensS, N, dirL
+            ! logical :: flag
+
+            ! R = 8.7d-3!4.6d-3
+            ! n1 = 1.d0
+            ! n2 = 1.4338d0!1.458d0
+            ! lensThickness = 4.3d-3!2.2d-3
+            ! backfocal = 17.0d-3!8.5d-3
+
+            ! !get x, y in gaussian dist
+            ! call rang(xi, yi, 0.d0, 1.d-3/4.d0, iseed)
+            ! zi = -10.d-3
+
+            ! !init pos/direction of photon
+            ! posi = vector(xi, yi, zi)
+            ! diri = vector(0.d0, 0.d0, 1.d0)
+
+            ! !centre of lens defining sphere
+            ! centre = vector(0.d0, 0.d0, R)
+
+            ! !get intersection point as func of t
+            ! if(.not.intersect(posi, diri, t, centre, R))error stop
+
+            ! !get real po on lens surface
+            ! lensS = posi + t * diri
+            
+            ! !get normal on lens surface
+            ! N = (lensS - centre)
+            ! N = N%magnitude()
+
+            ! !do fresnel refraction
+            ! flag = .false.
+            ! call reflect_refract(diri, N, n1, n2, iseed, flag)
+            ! dirL = diri
+
+            ! !move photon to far side of lens
+            ! zL = lensThickness
+            ! distLens = (zL - lensS%z) / dirL%z
+            ! if(distLens < 0.d0)error stop
+            ! xL = xi + distLens * dirL%x
+            ! yL = yi + distLens * dirL%y
+
+            ! !sample on medium surface
+            ! xp = ranu(-xmax, xmax, iseed)
+            ! yp = ranu(-ymax, ymax, iseed)
+            ! zp = (backfocal + lensThickness) - zmax
+
+            ! distAir = sqrt((xL - xp)**2 + (yL - yp)**2 + (zL - zp)**2)
+
+            ! nxp = (xp - xL) / distAir
+            ! nyp = (yp - yL) / distAir
+            ! ! force -ive as thats how MCRT code is setup
+            ! nzp = -abs((zp - zL) / distAir)
+
+            ! phi = atan2(nyp, nxp)
+            ! cosp = cos(phi)
+            ! sinp = sin(phi)
+
+            ! cost = nzp
+            ! sint = sqrt(1.d0 - cost**2)
+
+            ! phase = distAir + distLens*n2 + lensS%z
+            ! zp = zmax - (1.e-5*(2.*zmax/nzg))
