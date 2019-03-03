@@ -39,8 +39,8 @@ implicit none
             ! rhokap = 0.
             ! jmean = 0.
             ! jmeanGLOBAL = 0.
-            imaget = 0.
-            imagetGlobal=0.
+            ! imaget = 0.
+            ! imagetGlobal=0.
             ! imageb = 0.
             ! imagebGlobal=0.
 
@@ -81,17 +81,17 @@ implicit none
             inquire(iolength=i)zface
             call chck_mem(cnt, i, limit, 'zface', numproc)
 
-            allocate(rhokap(nxg,nyg,nzg))
-            inquire(iolength=i)rhokap
-            call chck_mem(cnt, i, limit, 'rhokap', numproc)
+            ! allocate(rhokap(nxg,nyg,nzg))
+            ! inquire(iolength=i)rhokap
+            ! call chck_mem(cnt, i, limit, 'rhokap', numproc)
 
-            allocate(imaget(nxg, nyg))
-            inquire(iolength=i)imaget
-            call chck_mem(cnt, i, limit, 'imaget', numproc)
+            ! allocate(imaget(nxg, nyg))
+            ! inquire(iolength=i)imaget
+            ! call chck_mem(cnt, i, limit, 'imaget', numproc)
 
-            allocate(imagetGLOBAL(nxg, nyg))
-            inquire(iolength=i)imagetGLOBAL
-            call chck_mem(cnt, i, limit, 'imagetGLOBAL', numproc)
+            ! allocate(imagetGLOBAL(nxg, nyg))
+            ! inquire(iolength=i)imagetGLOBAL
+            ! call chck_mem(cnt, i, limit, 'imagetGLOBAL', numproc)
 
             ! allocate(imageb(nxg, nyg))
             ! inquire(iolength=i)imageb

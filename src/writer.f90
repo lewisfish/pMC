@@ -29,12 +29,12 @@ module writer_mod
             character(len=256)  :: filename
 
 
-            filename = 'jmean/aspherp1.raw'
+            filename = 'jmean/testp.raw'
             
             call write_binary(trim(filename), real(phasorGLOBAL))
             print*,trim(filename)
 
-            filename = 'jmean/aspher1.raw'
+            filename = 'jmean/test.raw'
             
             call write_binary(trim(filename), abs(phasorGLOBAL)**2)
             print*,trim(filename)

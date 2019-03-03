@@ -64,14 +64,13 @@ program mcpolar
 
     close(u)
 
-    iseed = -123456879 + id
+    iseed = -987654321 + id
     iseed = -abs(iseed+id)  ! Random number seed must be negative for ran2
 
     holdseed = iseed
 
     phiim   = 0. * pi/180.
     thetaim = 180. * pi/180.
-
 
     !image postion vector
     !angle for vector
@@ -81,19 +80,19 @@ program mcpolar
     cospim = cos(phiim)
 
     !vector
-    v(1) = sintim * cospim     
+    v(1) = sintim * cospim
     v(2) = sintim * sinpim
-    v(3) = costim      
+    v(3) = costim
 
     call init_opt4
-    wavelength = 780.d-9!587.6d-9!7.6e-9
+    wavelength = 488d-9!587.6d-9!7.6e-9
     fact = twopi/wavelength
     tana=tan(5.d0*pi/180.d0)
 
-    binwid = 2.d-3/1000.!pixres
-    pixels = imgsize/binwid
-    allocate(imageb(1000, 1000))
-    allocate(imagebGLOBAL(1000, 1000))
+    binwid = 2.*.05d-3/100.!pixres
+    ! pixels = imgsize/binwid
+    allocate(imageb(-2000:2000, -2000:2000))
+    allocate(imagebGLOBAL(-2000:2000, -2000:2000))
 
     !2.*xmax / real(nxg)
     if(id == 0)then
@@ -146,6 +145,7 @@ program mcpolar
         !***** Release photon from point source *******************************
         call sourceph(xcell,ycell,zcell,raxi, dtoskin, iseed)
 
+        call peeling(xcell,ycell,zcell,delta,iseed, .true.)
 
 
         ! imaget(xcell, ycell) = imaget(xcell, ycell) + cmplx(cos((phase * fact)), sin(phase * fact))
@@ -157,36 +157,34 @@ program mcpolar
         !******** Photon scatters in grid until it exits (tflag=TRUE) 
         do while(tflag.eqv..FALSE.)
 
-            ! if(ran2(iseed) < albedo)then!interacts with tissue
-            !       call stokes(iseed)
-            !       nscatt = nscatt + 1        
-            !    else
+            if(ran2(iseed) < albedo)then!interacts with tissue
+                  call stokes(iseed)
+                  nscatt = nscatt + 1        
+               else
+
                   tflag = .true.
                   exit
-            ! end if
+            end if
 
             ! !************ Find next scattering location
 
-            ! call tauint1(xcell,ycell,zcell,tflag,iseed,delta)
-            ! if(.not. tflag)call peeling(xcell,ycell,zcell,delta)
+            call tauint1(xcell,ycell,zcell,tflag,iseed,delta)
+            if(.not. tflag)call peeling(xcell,ycell,zcell,delta,iseed, .false.)
+
 
         end do
         ! stop
         if(xcell /= -1 .and. ycell /= -1 .and. tflag)then
-            ! if(abs(xp) <= imgsize/2. .and. abs(yp) <= imgsize/2.)then
-                ! print*,xp+xmax,yp+xmax,xcell,ycell
-                ! idx = floor(xcell/binwid) + 1
-                ! idy = floor(((yp + ymax) - (2.*xmax-imgsize)/2.)/binwid) + 1
-                ! print*,idx,idy
-                ! print*,xcell,ycell
-                ! imageb(xcell, ycell) = imageb(xcell, ycell) + cmplx(cos((phase * fact)), sin(phase * fact))
-            ! end if
+                ! binwid = 2.*1.d-3/2000.!pixres
+                ! idx = floor((xp)/binwid) + 0
+                ! idy = floor((yp)/binwid) + 0
+                ! imageb(idx, idy) = imageb(idx, idy) + cmplx(cos((phase * fact)), sin(phase * fact))
         end if
 
     end do      ! end loop over nph photons
 
     ! call mpi_reduce(imaget, imagetGLOBAL, size(imaget), mpi_double_complex, mpi_sum, 0, mpi_comm_world, error)
-    ! call mpi_reduce(imageb, imagebGLOBAL, size(imageb), mpi_double_complex, mpi_sum, 0, mpi_comm_world, error)
+    call mpi_reduce(imageb, imagebGLOBAL, size(imageb), mpi_double_complex, mpi_sum, 0, mpi_comm_world, error)
     call mpi_reduce(phasor, phasorGLOBAL, size(phasor), mpi_double_complex, mpi_sum, 0, mpi_comm_world, error)
 
     call mpi_reduce(nscatt, nscattGLOBAL, 1, mpi_double, mpi_sum, 0, mpi_comm_world, error)
@@ -207,9 +205,9 @@ program mcpolar
         ! write(u)abs(imagetGLOBAL)**2
         ! close(u)
 
-        ! open(newunit=u,file="bessel-l"//str(int(l))//"-bot-int-test.dat",access="stream",form="unformatted",status="replace")
-        ! write(u)abs(imagebGLOBAL)**2
-        ! close(u)
+open(newunit=u,file="bessel-peel-50mus.dat",access="stream",form="unformatted",status="replace")
+        write(u)abs(imagebGLOBAL)**2
+        close(u)
 
         ! open(newunit=u,file="bessel-l"//str(int(l))//"-phase.dat",access="stream",form="unformatted",status="replace")
         ! write(u)real(imageGLOBAL)

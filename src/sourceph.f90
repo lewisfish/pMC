@@ -5,7 +5,7 @@ MODULE sourceph_mod
     implicit none
 
     private
-    public :: sourceph
+    public :: sourceph, ranu
 
     CONTAINS
         subroutine sourceph(xcell, ycell, zcell,raxi, dtoskin, iseed)
@@ -19,13 +19,14 @@ MODULE sourceph_mod
             integer,          intent(INOUT) :: iseed
             real, intent(IN) :: raxi, dtoskin
 
-            ! call bessel(raxi, dtoskin, iseed)
+            call bessel(raxi, dtoskin, iseed)
             ! do
             ! call gaussian_plano(iseed)
-            call gaussian_aspeheric(iseed)
+            ! call gaussian_aspeheric(iseed)
             xcell = int(nxg * (xp + xmax) / (2. * xmax)) + 1
             ycell = int(nyg * (yp + ymax) / (2. * ymax)) + 1
             zcell = int(nzg * (zp + zmax) / (2. * zmax)) + 1
+            ! print*,xcell, ycell, xp, yp
             ! print*,xcell,ycell,zcell,nzg
             ! if(xcell <= nxg .and. ycell <= nyg .and. zcell <= nzg)exit
             ! end do
@@ -53,21 +54,27 @@ MODULE sourceph_mod
             phase = 0.d0
             tana = tan(5.d0*pi/180.d0)
             !top of axicon
-            call rang(xp, yp, 0.d0, 1.d-3/4.d0, iseed)
+            ! do
+                call rang(xp, yp, 0.d0, 1.d-3/4.d0, iseed)
             ! y = qrang(0.d0, 1.d-3/4.d0, iseed)
 
-            r_pos = sqrt(xp**2 + yp**2)
+                r_pos = sqrt(xp**2 + yp**2)
+            !     if(r_pos < .5d-3)exit
+            ! end do
             zp = (raxi - r_pos) * tana
 
             phase = n*zp
 
-            x0 = ranu(-xmax, xmax, iseed)!2.*sqrt(2.)*xmax * ran*sin(37.*pi/180.)!ranu(-xmax, xmax, iseed)
-            y0 = ranu(-ymax, ymax, iseed)!2.*sqrt(2.)*xmax * ran*cos(37.*pi/180.)!ranu(-ymax, ymax, iseed)
-            z0 = (r_pos* tana) + d + zp!11.1mm
+            x0 = ranu(-xmax , xmax , iseed)!2.*sqrt(2.)*xmax * ran*sin(37.*pi/180.)!ranu(-xmax, xmax, iseed)
+            y0 = ranu(-xmax , xmax , iseed)!2.*sqrt(2.)*xmax * ran*cos(37.*pi/180.)!ranu(-ymax, ymax, iseed)
+            z0 = (r_pos* tana) + d + zp !11.1mm   => r_pos*tana is distane from lens surface to plane at tip of axicon
 
             dist = sqrt((x0 - xp)**2 + (y0 - yp)**2 + (z0 - zp)**2)
 
             phase = phase + dist
+            ! z0 = z0 + 2.*zmax
+            ! dist = sqrt((x0 - xp)**2 + (y0 - yp)**2 + (z0 - zp)**2)
+
 
             nxp = (x0 - xp) / dist
             nyp = (y0 - yp) / dist
@@ -81,10 +88,16 @@ MODULE sourceph_mod
             cosp = cos(phi)
             sinp = sin(phi)
 
+            ! zp = zmax - (1.e-5*(2.*zmax/nzg))
+            ! dist = (zp - z0) / nzp
+            ! xp = x0 + dist * nxp
+            ! yp = y0 + dist * nyp
+
 
             xp = x0
             yp = y0
             zp = zmax - (1.e-5*(2.*zmax/nzg))
+
 
             ! A1 = wavelength
             ! R0 = 1d-3
@@ -116,7 +129,7 @@ MODULE sourceph_mod
             real :: ran2
             type(vector) :: orig, dirI, centre, lensI, N, dirL, lensF, final, dirF, dir
             logical :: flag
-
+! https://www.thorlabs.com/newgrouppage9.cfm?objectgroup_id=123
             lensThickness = 2.2d-3
             focalBack = 8.5d-3
             R = 4.6d-3
@@ -128,11 +141,11 @@ MODULE sourceph_mod
             zi = focalBack + lensThickness + 2.*zmax
             ! do
             call rang(xi, yi, 0.d0, 1.d-3/4.d0, iseed)
-                ! if(sqrt(xi**2 + yi**2) > radlens)then
-                !     cycle
-                ! else
-                    ! exit
-                ! end if
+            !     if(sqrt(xi**2 + yi**2) > .5d-3)then
+            !         cycle
+            !     else
+            !         exit
+            !     end if
             ! end do
             orig = vector(xi, yi, zi)
             dirI = vector(0.d0, 0.d0, -1.d0)
@@ -199,33 +212,31 @@ MODULE sourceph_mod
 
             integer, intent(INOUT) :: iseed
 
-    real :: xi, yi, zi, focalBack, lensThickness, R, t, ZL, n1, n2, distLens, distAir, radlens, as(5),k,ti(3)
-            real :: zadj, l0, m0, n0, g0,c,s0,z0,z0bar,e,E1,c1,L,m12,ml2,p2,f,fdash,g
+            real :: xi, yi, zi, focalBack, lensThickness, R, n1, n2, distLens, distAir, radlens, as(5), k
+            real :: zadj, zL
             type(vector) :: orig, dirI, centre, lensI, N, dirL, lensF, final, dirF
             logical :: flag
             integer :: i
 
-            ! do i = 1, 1000
             !thor labs lens 354220-C
-            as = [4.789735d-4, 4.049692d-6, 3.128181d-8, -6.498699d-10, 0.d0]
-            k = -0.925522
-            lensThickness = 3.434d-3
-            focalBack = 5.9d-3
-            R = 4.638124d-3
+            as = [8.924167d-5, 4.38436d-7, 0.d0, 0.d0, 0.d0]
+            k = -.73128d0
+            lensThickness = 5.0d-3
+            focalBack = 6.91d-3 + .9d-3
+            R = 6.428132d-3
             n1 = 1.d0
-            n2 = 1.586d0
+            n2 = 1.584d0
+            radlens = 5.5d-3 / 2.d0
+            centre = vector(0.d0, 0.d0, (focalBack + lensThickness) - R)
 
-            radlens = 9.936d-3 / 2.d0
-
-            call rang(xi, yi, 0.d0, 1.d-3/4.d0, iseed)
-            zi = focalBack + lensThickness + 2.*zmax
             ! do i = 1, 1000
-            ! zi = focalBack + lensThickness + .5d-3
-            call rang(xi, yi, 0.d0, 1.d-3/4.d0, iseed)
+            zi = focalBack + lensThickness + zmax
+            do
+                call rang(xi, yi, 0.d0, 1.d-3/4.d0, iseed)
+                if(sqrt(xi**2 + yi**2) < radlens)exit
+            end do
             orig = vector(xi, yi, zi)
             dirI = vector(0.d0, 0.d0, -1.d0)
-
-            centre = vector(0.d0, 0.d0, (focalBack + lensThickness) - R)
             ! print*,orig
             zi = focalBack + lensThickness ! @ plane from where sag is defined
 
@@ -235,8 +246,7 @@ MODULE sourceph_mod
             lensI = vector(xi, yi, zi) !on front surface of lens
             ! print*,lensI
             !!get normal
-            N = grad(lensI%x, lensI%y, R, k, as, .9d-3)!grad_aspher(xi, yi, R, k, as)
-
+            N = grad(lensI%x, lensI%y, R, k, as, 1d-8)!grad_aspher(xi, yi, R, k, as)
 
             dirL = dirI
             call reflect_refract(dirL, N, n1, n2, iseed, flag)
@@ -249,9 +259,15 @@ MODULE sourceph_mod
             end if
             lensF = lensI + distLens*dirL !@ lend face back
             ! print*,lensF
-                  
-            final = vector(ranu(-xmax, xmax, iseed), ranu(-ymax, ymax, iseed), zmax - (1.e-5*(2.*zmax/nzg))) !@ in medium
 
+
+            ! N = vector(0.d0, 0.d0, 1.d0)
+            ! call reflect_refract(dirL, N, n2, n1, iseed, flag)
+            ! final%z = zmax - (1.e-5*(2.*zmax/nzg))
+            ! distAir = (final%z - lensF%z)/dirL%z
+            ! final = lensF + distAir * dirL
+            ! print*,final
+            final = vector(ranu(-xmax, xmax, iseed), ranu(-ymax, ymax, iseed), zmax - (1.e-5*(2.*zmax/nzg))) !@ in medium
             distAir = sqrt((final%x - LensF%x)**2 + (final%y - LensF%y)**2 + (final%z - LensF%z)**2)
 
             dirF = (final - lensF) / distAir
@@ -272,11 +288,11 @@ MODULE sourceph_mod
             yp = final%y
             zp = final%z
 
-            phase = distAir + distLens*n2 + zadj !(orig%z - lensI%z)
-            ! print*,xp,yp,zp
+            phase = distAir + distLens*n2 + (orig%z - lensI%z)
             ! print*,
             ! print*,
         ! end do
+        ! print*,0.d0, 0.d0, 0.d0
         ! stop
         end subroutine gaussian_aspeheric
 
@@ -292,7 +308,7 @@ MODULE sourceph_mod
             n = size(as)
 
             !$\frac{Y^2}{R\left(1+\sqrt{1-(1+k)\frac{Y^2}{R^2}}\right)}$
-            aspheric = (rad**2) / (radcurve * (1.d0 + sqrt(1.d0 - (1.d0 + k)) * (rad / radcurve)**2))
+            aspheric = (rad**2) / (radcurve * (1.d0 + sqrt(1.d0 - (1.d0 + k) * (rad / radcurve)**2)))
 
             do i = 1, n
                 aspheric = aspheric + as(i)*rad**(2*n+2)

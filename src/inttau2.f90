@@ -3,7 +3,7 @@ module inttau2
    implicit none
    
    private
-   public :: tauint1, find, peeling, reflect_refract
+   public :: tauint1, find, reflect_refract, peeling
 
 contains
 
@@ -13,7 +13,8 @@ contains
     !
         use constants,   only : xmax, ymax, zmax, fact
         use photon_vars, only : xp, yp, zp, phase, initp
-        use iarray,      only : rhokap, phasor
+        use opt_prop, only : kappa
+        use iarray,      only : phasor
         ! use opt_prop,    only : kappa
         ! use taufind2
 
@@ -45,7 +46,7 @@ contains
   
             dir = (/.FALSE., .FALSE., .FALSE./)
             dcell = wall_dist(celli, cellj, cellk, xcur, ycur, zcur, dir)
-            taucell = dcell * rhokap(celli, cellj, cellk)
+            taucell = dcell * kappa!rhokap(celli, cellj, cellk)
             if(taurun + taucell < tau)then
                 taurun = taurun + taucell
                 d = d + dcell
@@ -58,7 +59,7 @@ contains
                 call update_pos(xcur, ycur, zcur, celli, cellj, cellk, dcell, .TRUE., dir, delta)
             else
 
-                dcell = (tau - taurun) /rhokap(celli, cellj, cellk)
+                dcell = (tau - taurun) /kappa!rhokap(celli, cellj, cellk)
                 d = d + dcell
                 
                 phase = phase + dcell
@@ -342,26 +343,26 @@ contains
     ! end subroutine tauquick
 
 
-    subroutine peeling(xcell,ycell,zcell,delta)
+    subroutine peeling(xcell,ycell,zcell,delta,iseed,flag)
    
         use iarray,      only : imageb
-        use constants,   only : v, costim, sintim, cospim, sinpim, twopi, fact, pi, xmax, nxg, zmax, imgsize, ymax, pixels
+        use constants,   only : v, costim, sintim, cospim, sinpim, fact, pi, xmax, nxg, zmax, ymax
         use photon_vars, only : xp, yp, zp, nxp, nyp, nzp, phase
-        use opt_prop,    only : wavelength, hgg, g2
+        use opt_prop,    only : hgg, g2
         use taufind2
 
         implicit none
 
 
         real,    intent(IN)    :: delta
-        integer, intent(INOUT) :: xcell, ycell, zcell
+        integer, intent(INOUT) :: xcell, ycell, zcell,iseed
+        logical :: flag
+
         real                   :: cosa, prob, xim, yim, xpold,ypold, hgfact, binwid
         real                   :: nxpold, nypold, nzpold,zpold, tau3, dist, phaseold
         integer                :: binx, biny, xcellold, ycellold, zcellold
 
-        integer :: i, j
-        real :: xpnew, ypnew, zpnew, phi
-
+        phaseold = phase
         nxpold = nxp
         nypold = nyp
         nzpold = nzp
@@ -370,84 +371,65 @@ contains
         ycellold = ycell
         zcellold = zcell
 
-        phaseold = phase
-
         xpold = xp
         ypold = yp
         zpold = zp
-
-        zpnew = -zmax
-        do i = 1, 100
-            xpnew = (i*(imgsize/real(pixels))) + (xmax-0.5d0*imgsize)
-            do j = 1, 100
-                ypnew = (j*(imgsize/real(pixels))) + (ymax-0.5d0*imgsize)
-                ! print*,xpnew,ypnew
-
-                dist = sqrt((xpnew - xpold)**2 + (ypnew - ypold)**2 + (zpnew - zpold)**2)
-
-                ! v(1) = (xpnew - xp) / dist
-                ! v(2) = (ypnew - yp) / dist
-                ! v(3) = (zpnew - zp) / dist
-
-                ! phi = atan2(nyp, nxp)
-
-                ! cospim = cos(phi)
-                ! sinpim = sin(phi)
-                ! costim = nzp
-                ! sintim = sqrt(1.d0 - costim**2)
-
-                ! cosa = nxp*v(1) + nyp*v(2) + nzp*v(3)!angle of peeled off photon
-                ! nxp = v(1)
-                ! nyp = v(2)
-                ! nzp = v(3)
-                ! xim = yp*cospim - xp*sinpim
-                ! yim = zp*sintim - yp*costim*sinpim - xp*costim*cospim
-
-                ! call tau2(xcell,ycell,zcell,delta, tau3, dist)
-
-                ! hgfact = (1.-g2) / ((4.*pi)*(1.+g2-2.*hgg*cosa)**(1.5))
-
-                prob =  1.!exp(-tau3) !* hgfact
-                phase = phase + dist
-                imageb(i, j) = imageb(i, j) + cmplx(prob * cos((phase * fact)), prob * sin(phase * fact))
-            end do
-        end do
+        ! phi = 0.
+        ! theta = 180.
 
 
+        ! xp = ranu(-.05d-3, .05d-3, iseed)
+        ! yp = ranu(-.05d-3, .05d-3, iseed)
+        ! zp = -zmax
+
+        ! dist = sqrt((xp - xpold)**2 + (yp - ypold)**2 + (zp - zpold)**2)
+        ! v(1) = (xp - xpold) / dist
+        ! v(2) = (yp - ypold) / dist
+        ! v(3) = (zp - zpold) / dist
+
+        cosa = nxp*v(1) + nyp*v(2) + nzp*v(3)!angle of peeled off photon
+
+        nxp = v(1)
+        nyp = v(2)
+        nzp = v(3)
+        xim = yp*cospim - xp*sinpim
+        yim = zp*sintim - yp*costim*sinpim - xp*costim*cospim
+
+        call tau2(xcell, ycell, zcell, delta, tau3, dist)
+
+        binwid = 2.*1.d-3/2000.!pixres
+
+        binx = floor(xim/binwid)
+        biny = floor(yim/binwid)
+
+        if(flag)then
+            hgfact = 1./(4.*pi)
+        else
+            hgfact = (1.-g2) / ((4.*pi)*(1.+g2-2.*hgg*cosa)**(1.5))
+        end if
+        dist = (-zmax - zp) / nzp
+        xp = xpold + dist * nxp
+        yp = ypold + dist * nyp
+        zp = zpold + dist * nzp
+
+        prob = hgfact * exp(-tau3)
+
+        phase = phase + dist
+        imageb(binx, biny) = imageb(binx, biny) + cmplx(prob *cos(fact*phase), prob *sin(fact*phase))
 
 
-        ! call taufind1(xcell, ycell, zcell, delta, tau3)
-        ! call tau2(xcell,ycell,zcell,delta, tau3, dist)
-
-        ! binwid = 2.*xmax / real(nxg)
-
-        ! binx = floor(xim/binwid)
-        ! biny = floor(yim/binwid)
-
-        ! print*,binx,biny
-        ! hgfact = (1.-g2) / ((4.*pi)*(1.+g2-2.*hgg*cosa)**(1.5))
-
-        ! prob =  exp(-tau3) !* tau3 !* hgfact
-        ! phase = phase + dist
-        ! image(binx, biny) = image(binx, biny) + cmplx(prob * cos((phase * fact)), prob * sin(phase * fact))
-
-        ! imagep(binx, biny) = imagep(binx, biny) + prob + phase
-        ! imaget(binx, biny) = imaget(binx, biny) + prob*tau3
-        ! imagethg(binx, biny) = imagethg(binx, biny) + prob*tau3*hgfact
+        xp = xpold
+        yp= ypold
+        zp = zpold
 
         nxp = nxpold
         nyp = nypold
         nzp = nzpold
 
-        xp = xpold
-        yp = ypold
-        zp = zpold
-
-        phase = phaseold
-
         xcell = xcellold 
         ycell = ycellold 
         zcell = zcellold 
+        phase = phaseold
 
     end subroutine peeling
 
@@ -564,5 +546,17 @@ contains
                 return
             end if
         end function fresnel
+        real function ranu(a, b, iseed)
 
+            implicit none
+
+
+            real, intent(IN)       :: a, b
+            integer, intent(INOUT) :: iseed
+
+            real :: ran2
+
+            ranu = a + ran2(iseed) * (b - a)
+
+        end function ranu
 end module inttau2

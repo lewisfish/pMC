@@ -6,7 +6,7 @@ module gridset_mod
         subroutine gridset(id)
 
             use constants, only : nxg, nyg, nzg, xmax, ymax, zmax
-            use iarray,    only : xface, yface, zface, rhokap
+            use iarray,    only : xface, yface, zface
             use ch_opt,    only : init_opt4
             use opt_prop,  only : kappa
 
@@ -54,7 +54,7 @@ module gridset_mod
                         !       rhokap(i,j,k)=kappa
                         !    end if
                         ! else
-                           rhokap(i,j,k)=kappa
+                           ! rhokap(i,j,k)=kappa
                         ! end if
                     end do
                 end do
