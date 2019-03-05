@@ -3,7 +3,7 @@ module inttau2
    implicit none
    
    private
-   public :: tauint1, find, reflect_refract, peeling
+   public :: tauint1, find, reflect_refract
 
 contains
 
@@ -12,11 +12,8 @@ contains
     !
     !
         use constants,   only : xmax, ymax, zmax, fact
-        use photon_vars, only : xp, yp, zp, phase, initp
+        use photon_vars, only : xp, yp, zp, phase
         use opt_prop, only : kappa
-        use iarray,      only : phasor
-        ! use opt_prop,    only : kappa
-        ! use taufind2
 
         implicit none
 
@@ -53,7 +50,6 @@ contains
 
                 phase = phase + dcell
                 phasec = cmplx(cos(fact*phase), sin(fact*phase))
-                phasor(celli,cellj,cellk) = phasor(celli,cellj,cellk) + phasec
 
 
                 call update_pos(xcur, ycur, zcur, celli, cellj, cellk, dcell, .TRUE., dir, delta)
@@ -64,7 +60,6 @@ contains
                 
                 phase = phase + dcell
                 phasec = cmplx(cos(fact*phase), sin(fact*phase))
-                phasor(celli,cellj,cellk) = phasor(celli,cellj,cellk) + phasec
 
                 call update_pos(xcur, ycur, zcur, celli, cellj, cellk, dcell, .FALSE., dir, delta)
                 exit
@@ -264,175 +259,6 @@ contains
     end function find
 
 
-    ! subroutine taufind1(xcell,ycell,zcell,delta,taurun)
-    ! !   routine to find tau from current position to edge of grid in a direction (nxp,nyp,nzp)
-    ! !
-    ! !
-    !     use photon_vars, only : xp, yp, zp
-    !     ! use iarray,      only : rhokap
-    !     use opt_prop,    only : wavelength
-    !     use constants,   only : xmax, ymax, zmax 
-     
-    !     implicit none
-
-    !     real,    intent(IN)    :: delta
-    !     integer, intent(INOUT) :: xcell, ycell, zcell
-
-    !     real                   :: taurun, taucell, xcur, ycur, zcur, d, dcell, tau
-    !     integer                :: celli, cellj, cellk, iseed
-    !     logical                :: dir(3),tmp
-
-    !     xcur = xp + xmax
-    !     ycur = yp + ymax
-    !     zcur = zp + zmax
-
-    !     celli = xcell
-    !     cellj = ycell
-    !     cellk = zcell
-
-    !     taurun = 0.
-    !     taucell = 0.
-
-    !     d = 0.
-    !     dcell = 0.
-
-    !     dir = (/.FALSE., .FALSE., .FALSE./)
-    !     do
-    !         dcell = wall_dist(celli, cellj, cellk, xcur, ycur, zcur, dir)
-    !         ! taucell = dcell * rhokap(celli,cellj,cellk)
-
-    !         taurun = taurun + taucell
-    !         d = d + dcell
-    !         call update_pos(xcur, ycur, zcur, celli, cellj, cellk, dcell, .TRUE., dir, delta)
-
-    !         if(celli == -1 .or. cellj == -1 .or. cellk == -1)then
-    !             exit
-    !         end if
-    !     end do
-    ! end subroutine taufind1
-
-
-    ! subroutine tauquick(xcell, ycell, zcell, zp, delta, taurun)
-
-    !     use constants,   only : nzg, zmax
-    !     use iarray,      only : zface!,rhokap
-    !     use opt_prop,    only : wavelength
-    !     use photon_vars, only : nzp
-
-    !     implicit none
-
-
-    !     integer, intent(IN)  :: xcell, ycell, zcell
-    !     real,    intent(IN)  :: zp, delta
-    !     real,    intent(OUT) :: taurun
-
-    !     integer :: cellk
-    !     real    :: tau, dcell, taucell, zcur
-
-    !     taurun = 0.
-
-    !     zcur = zp + zmax
-
-    !     do cellk = zcell, 1 -1
-
-    !         dcell = (zface(cellk) - zcur)/nzp
-    !         ! taucell = dcell * rhokap(xcell, ycell, cellk)
-    !         taurun = taurun + taucell
-    !         zcur = zface(cellk) + delta
-    !     end do
-    ! end subroutine tauquick
-
-
-    subroutine peeling(xcell,ycell,zcell,delta,iseed,flag)
-   
-        use iarray,      only : imageb
-        use constants,   only : v, costim, sintim, cospim, sinpim, fact, pi, xmax, nxg, zmax, ymax
-        use photon_vars, only : xp, yp, zp, nxp, nyp, nzp, phase
-        use opt_prop,    only : hgg, g2
-        use taufind2
-
-        implicit none
-
-
-        real,    intent(IN)    :: delta
-        integer, intent(INOUT) :: xcell, ycell, zcell,iseed
-        logical :: flag
-
-        real                   :: cosa, prob, xim, yim, xpold,ypold, hgfact, binwid
-        real                   :: nxpold, nypold, nzpold,zpold, tau3, dist, phaseold
-        integer                :: binx, biny, xcellold, ycellold, zcellold
-
-        phaseold = phase
-        nxpold = nxp
-        nypold = nyp
-        nzpold = nzp
-
-        xcellold = xcell
-        ycellold = ycell
-        zcellold = zcell
-
-        xpold = xp
-        ypold = yp
-        zpold = zp
-        ! phi = 0.
-        ! theta = 180.
-
-
-        ! xp = ranu(-.05d-3, .05d-3, iseed)
-        ! yp = ranu(-.05d-3, .05d-3, iseed)
-        ! zp = -zmax
-
-        ! dist = sqrt((xp - xpold)**2 + (yp - ypold)**2 + (zp - zpold)**2)
-        ! v(1) = (xp - xpold) / dist
-        ! v(2) = (yp - ypold) / dist
-        ! v(3) = (zp - zpold) / dist
-
-        cosa = nxp*v(1) + nyp*v(2) + nzp*v(3)!angle of peeled off photon
-
-        nxp = v(1)
-        nyp = v(2)
-        nzp = v(3)
-        xim = yp*cospim - xp*sinpim
-        yim = zp*sintim - yp*costim*sinpim - xp*costim*cospim
-
-        call tau2(xcell, ycell, zcell, delta, tau3, dist)
-
-        binwid = 2.*1.d-3/2000.!pixres
-
-        binx = floor(xim/binwid)
-        biny = floor(yim/binwid)
-
-        if(flag)then
-            hgfact = 1./(4.*pi)
-        else
-            hgfact = (1.-g2) / ((4.*pi)*(1.+g2-2.*hgg*cosa)**(1.5))
-        end if
-        dist = (-zmax - zp) / nzp
-        xp = xpold + dist * nxp
-        yp = ypold + dist * nyp
-        zp = zpold + dist * nzp
-
-        prob = hgfact * exp(-tau3)
-
-        phase = phase + dist
-        imageb(binx, biny) = imageb(binx, biny) + cmplx(prob *cos(fact*phase), prob *sin(fact*phase))
-
-
-        xp = xpold
-        yp= ypold
-        zp = zpold
-
-        nxp = nxpold
-        nyp = nypold
-        nzp = nzpold
-
-        xcell = xcellold 
-        ycell = ycellold 
-        zcell = zcellold 
-        phase = phaseold
-
-    end subroutine peeling
-
         subroutine reflect_refract(I, N, n1, n2, iseed, rflag)
 
             use vector_class
@@ -546,17 +372,4 @@ contains
                 return
             end if
         end function fresnel
-        real function ranu(a, b, iseed)
-
-            implicit none
-
-
-            real, intent(IN)       :: a, b
-            integer, intent(INOUT) :: iseed
-
-            real :: ran2
-
-            ranu = a + ran2(iseed) * (b - a)
-
-        end function ranu
 end module inttau2

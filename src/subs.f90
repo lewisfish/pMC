@@ -21,7 +21,7 @@ implicit none
             ! get data dir
             fileplace = trim(homedir)//'data/'
             ! get res dir
-            resdir=trim(homedir)//'res/'
+            resdir = trim(homedir)//'res/'
 
         end subroutine directory
 
@@ -36,16 +36,9 @@ implicit none
             xface = 0.
             yface = 0.
             zface = 0.
-            ! rhokap = 0.
-            ! jmean = 0.
-            ! jmeanGLOBAL = 0.
-            ! imaget = 0.
-            ! imagetGlobal=0.
-            ! imageb = 0.
-            ! imagebGlobal=0.
 
-            phasor = cmplx(0., 0.)
-            phasorGLOBAL = cmplx(0., 0.)
+            imageb = cmplx(0.d0, 0.d0)
+            imagebGLOBAL = cmplx(0.d0, 0.d0)
 
         end subroutine zarray
 
@@ -81,42 +74,8 @@ implicit none
             inquire(iolength=i)zface
             call chck_mem(cnt, i, limit, 'zface', numproc)
 
-            ! allocate(rhokap(nxg,nyg,nzg))
-            ! inquire(iolength=i)rhokap
-            ! call chck_mem(cnt, i, limit, 'rhokap', numproc)
-
-            ! allocate(imaget(nxg, nyg))
-            ! inquire(iolength=i)imaget
-            ! call chck_mem(cnt, i, limit, 'imaget', numproc)
-
-            ! allocate(imagetGLOBAL(nxg, nyg))
-            ! inquire(iolength=i)imagetGLOBAL
-            ! call chck_mem(cnt, i, limit, 'imagetGLOBAL', numproc)
-
-            ! allocate(imageb(nxg, nyg))
-            ! inquire(iolength=i)imageb
-            ! call chck_mem(cnt, i, limit, 'imageb', numproc)
-
-            ! allocate(imagebGLOBAL(nxg, nyg))
-            ! inquire(iolength=i)imagebGLOBAL
-            ! call chck_mem(cnt, i, limit, 'imagebGLOBAL', numproc)
-
-            allocate(phasor(nxg, nyg, nzg))
-            inquire(iolength=i)phasor
-            call chck_mem(cnt, i, limit, 'phasor', numproc)
-
-
-            allocate(phasorGLOBAL(nxg, nyg, nzg))
-            inquire(iolength=i)phasorGLOBAL
-            call chck_mem(cnt, i, limit, 'phasorGLOBAL', numproc)
-
-            ! allocate(jmean(nxg,nyg,nzg))
-            ! inquire(iolength=i)jmean
-            ! call chck_mem(cnt, i, limit, 'jmean', numproc)
-
-            ! allocate(jmeanGLOBAL(nxg,nyg,nzg))
-            ! inquire(iolength=i)jmeanGLOBAL
-            ! call chck_mem(cnt, i, limit, 'jmeanGLOBAL', numproc)
+            allocate(imageb(-2000:2000, -2000:2000))
+            allocate(imagebGLOBAL(-2000:2000, -2000:2000))
 
 
             if(id == 0)print'(A,1X,F5.2,A)','allocated:',dble(cnt)/dble(limit)*100.d0,' % of total RAM'

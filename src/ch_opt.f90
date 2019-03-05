@@ -39,7 +39,8 @@ contains
    albedo = mus / kappa
 
    end subroutine init_opt2
-   
+
+
    subroutine init_opt3
 !
 !  subroutine to set tissue optical properties 758nm
@@ -58,6 +59,7 @@ contains
 
    end subroutine init_opt3
    
+
    subroutine init_opt4
 !
 !  subroutine to set tissue optical properties 488nm
@@ -66,15 +68,23 @@ contains
    
    implicit none
 
-   hgg = 0.88
+   real    :: b
+
+   ! conc = [0.d0, .39841d0, .79365d0, 1.18577d0, 1.57480d0]
+
+   hgg = 0.7
    g2  = hgg**2.
-   mua = 0.0000001d0
-   mus = 50.d0!13.55d0 / (1. - hgg)
+   mua = 0.d0
+
+   mus = 3.873d9 * wave**(-2.397d0)
+   b = 6.98d0*conc**(-.96d0)
+   mus = (mus) / b
 
    kappa  = mus + mua 
    albedo = mus / kappa
 
    end subroutine init_opt4
+
 
    subroutine sample(array, size_of, cdf, wave, iseed)
 !      

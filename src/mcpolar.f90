@@ -28,11 +28,11 @@ program mcpolar
     real    :: nscatt, raxi, dtoskin, binwid, ran2
     real    :: delta, start, finish, start2, finish2, tmp, phiim, thetaim
 
-    real    :: pixres
-
     !mpi variables
     integer :: id, error, numproc
     real    :: nscattGLOBAL
+
+    real, allocatable :: outer(:,:)
 
     call MPI_init(error)
     call MPI_Comm_size(MPI_COMM_WORLD, numproc, error)
@@ -59,8 +59,7 @@ program mcpolar
     read(u,*) n
     read(u,*) dtoskin
     read(u,*) l
-    read(u,*) imgsize
-    read(u,*) pixres
+    read(u,*) conc
 
     close(u)
 
@@ -84,17 +83,14 @@ program mcpolar
     v(2) = sintim * sinpim
     v(3) = costim
 
+    binwid = 2.*1.d-3/2000.
+    wavelength = 488d-9
+    wave = wavelength * 1d9
     call init_opt4
-    wavelength = 488d-9!587.6d-9!7.6e-9
+
     fact = twopi/wavelength
-    tana=tan(5.d0*pi/180.d0)
+    tana = tan(5.d0*pi/180.d0)
 
-    binwid = 2.*.05d-3/100.!pixres
-    ! pixels = imgsize/binwid
-    allocate(imageb(-2000:2000, -2000:2000))
-    allocate(imagebGLOBAL(-2000:2000, -2000:2000))
-
-    !2.*xmax / real(nxg)
     if(id == 0)then
         print*, ''      
         print*,'# of photons to run',nphotons*int(numproc,kind=int64)
@@ -105,7 +101,7 @@ program mcpolar
 
     !***** Set small distance for use in optical depth integration routines 
     !***** for roundoff effects when crossing cell walls
-    delta = 1.e-8*(2.*zmax/nzg)
+    delta = epsilon(1.d0)
     nscatt = 0
     nscattGLOBAL = 0
 
@@ -120,10 +116,10 @@ program mcpolar
         phase = 0.d0
         tflag=.FALSE.
 
-        if(j == 100000 .and. id == 0)then
+        if(j == 1000000 .and. id == 0)then
             call cpu_time(finish2)
             print*,' '
-            tmp = (finish2-start2)/100000.*real(nphotons)
+            tmp = (finish2-start2)/1000000.*real(nphotons)
             if(tmp >= 60.)then
                 tmp = tmp / 60.
                 if(tmp > 60)then
@@ -145,12 +141,6 @@ program mcpolar
         !***** Release photon from point source *******************************
         call sourceph(xcell,ycell,zcell,raxi, dtoskin, iseed)
 
-        call peeling(xcell,ycell,zcell,delta,iseed, .true.)
-
-
-        ! imaget(xcell, ycell) = imaget(xcell, ycell) + cmplx(cos((phase * fact)), sin(phase * fact))
-
-
         !****** Find scattering location
         call tauint1(xcell,ycell,zcell,tflag,iseed,delta)
 
@@ -169,23 +159,19 @@ program mcpolar
             ! !************ Find next scattering location
 
             call tauint1(xcell,ycell,zcell,tflag,iseed,delta)
-            if(.not. tflag)call peeling(xcell,ycell,zcell,delta,iseed, .false.)
-
 
         end do
         ! stop
         if(xcell /= -1 .and. ycell /= -1 .and. tflag)then
-                ! binwid = 2.*1.d-3/2000.!pixres
-                ! idx = floor((xp)/binwid) + 0
-                ! idy = floor((yp)/binwid) + 0
-                ! imageb(idx, idy) = imageb(idx, idy) + cmplx(cos((phase * fact)), sin(phase * fact))
+                idx = floor((xp)/binwid) + 0
+                idy = floor((yp)/binwid) + 0
+                imageb(idx, idy) = imageb(idx, idy) + cmplx(cos((phase * fact)), sin(phase * fact))
         end if
 
     end do      ! end loop over nph photons
 
-    ! call mpi_reduce(imaget, imagetGLOBAL, size(imaget), mpi_double_complex, mpi_sum, 0, mpi_comm_world, error)
     call mpi_reduce(imageb, imagebGLOBAL, size(imageb), mpi_double_complex, mpi_sum, 0, mpi_comm_world, error)
-    call mpi_reduce(phasor, phasorGLOBAL, size(phasor), mpi_double_complex, mpi_sum, 0, mpi_comm_world, error)
+    ! call mpi_reduce(phasor, phasorGLOBAL, size(phasor), mpi_double_complex, mpi_sum, 0, mpi_comm_world, error)
 
     call mpi_reduce(nscatt, nscattGLOBAL, 1, mpi_double, mpi_sum, 0, mpi_comm_world, error)
 
@@ -200,20 +186,13 @@ program mcpolar
     if(id == 0)then
         print*,'Average # of scatters per photon:',nscattGLOBAL/(nphotons*numproc)
         !write out files
-
-        ! open(newunit=u,file="bessel-l"//str(int(l))//"-top-int-test.dat",access="stream",form="unformatted",status="replace")
-        ! write(u)abs(imagetGLOBAL)**2
-        ! close(u)
-
-open(newunit=u,file="bessel-peel-50mus.dat",access="stream",form="unformatted",status="replace")
-        write(u)abs(imagebGLOBAL)**2
+        allocate(outer(size(imageb,1), size(imageb,2)))
+        outer = cabs(imagebGLOBAL)**2
+        open(newunit=u,file="bessel-peel-"//str(conc,4)//".dat",access="stream",form="unformatted",status="replace")
+        write(u)outer
         close(u)
 
-        ! open(newunit=u,file="bessel-l"//str(int(l))//"-phase.dat",access="stream",form="unformatted",status="replace")
-        ! write(u)real(imageGLOBAL)
-        ! close(u)
-
-        call writer(nphotons, numproc)
+        ! call writer(nphotons, numproc)
         print*,colour('write done',black,white_b,bold)
     end if
 

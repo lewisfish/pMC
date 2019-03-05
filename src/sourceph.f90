@@ -115,7 +115,7 @@ MODULE sourceph_mod
         subroutine gaussian_plano(iseed)
 
             use constants,   only : xmax, ymax, zmax, nzg, pi
-            use photon_vars, only : xp, yp, zp, phase, nxp, nyp, nzp, sint, cost, sinp, cosp, phi, initp
+            use photon_vars, only : xp, yp, zp, phase, nxp, nyp, nzp, sint, cost, sinp, cosp, phi
             use inttau2,     only : reflect_refract
  
 
@@ -193,9 +193,6 @@ MODULE sourceph_mod
             zp = final%z
 
             phase = distAir + distLens*n2 + (orig%z - lensI%z)
-
-            initp = (1.+abs(cost))/2.
-
         end subroutine gaussian_plano
 
 

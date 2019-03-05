@@ -9,6 +9,6 @@ module photon_vars
     implicit none
 
 
-    real :: xp, yp, zp, nxp, nyp, nzp, sint, cost, sinp, cosp, phi, phase, l, initp
+    real :: xp, yp, zp, nxp, nyp, nzp, sint, cost, sinp, cosp, phi, phase, l
 
 end module photon_vars
