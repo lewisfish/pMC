@@ -4,15 +4,19 @@ Module vector_class
         real :: x, y, z
         contains
 
-        procedure :: magnitude       => magnitude_fn
-        procedure :: print           => print_sub
-        generic   :: operator(.dot.) => vec_dot
-        generic   :: operator(/)     => vec_div_scal
-        generic   :: operator(*)     => vec_mult_vec, vec_mult_scal, scal_mult_vec
-        generic   :: operator(+)     => vec_add_vec, vec_add_scal, scal_add_vec
-        generic   :: operator(-)     => vec_minus_vec
+        procedure :: magnitude         => magnitude_fn
+        procedure :: length            => length_fn
+        procedure :: print             => print_sub
+        generic   :: operator(.dot.)   => vec_dot
+        generic   :: operator(.cross.) => vec_cross
+        generic   :: operator(/)       => vec_div_scal
+        generic   :: operator(*)       => vec_mult_vec, vec_mult_scal, scal_mult_vec
+        generic   :: operator(+)       => vec_add_vec, vec_add_scal, scal_add_vec
+        generic   :: operator(-)       => vec_minus_vec
 
         procedure, pass(a), private :: vec_dot
+
+        procedure, pass(a), private :: vec_cross
 
         procedure, pass(a), private :: vec_div_scal
 
@@ -29,7 +33,7 @@ Module vector_class
     end type vector
 
     private
-    public :: magnitude, vector, print
+    public :: magnitude, vector, print, length
 
     contains
 
@@ -94,6 +98,19 @@ Module vector_class
         end function vec_dot
 
 
+        elemental function vec_cross(a, b) result (cross)
+
+            implicit none
+
+            class(vector), intent(IN) :: a
+            type(vector),  intent(IN) :: b
+            type(vector) :: cross
+
+            cross = vector(a%y*b%z - a%z*b%y, a%z*b%x - a%x*b%z, a%x*b%y - a%y*b%x)
+
+        end function vec_cross
+
+
         type(vector) function vec_mult_vec(a, b)
 
             implicit none
@@ -150,11 +167,21 @@ Module vector_class
 
             real :: tmp
 
-            tmp = sqrt(this%x**2 + this%y**2 + this%z**2)
+            tmp = length_fn(this)
             magnitude_fn = this / tmp
 
         end function magnitude_fn
 
+
+        real function length_fn(this)
+
+            implicit none
+
+            class(vector) :: this
+
+            length_fn = sqrt(this%x**2 + this%y**2 + this%z**2)
+
+        end function length_fn
 
         subroutine print_sub(this)
 

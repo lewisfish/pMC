@@ -14,6 +14,7 @@ contains
         use constants,   only : xmax, ymax, zmax, fact
         use photon_vars, only : xp, yp, zp, phase
         use opt_prop, only : kappa
+        ! use iarray, only : phasor
 
         implicit none
 
@@ -50,6 +51,7 @@ contains
 
                 phase = phase + dcell
                 phasec = cmplx(cos(fact*phase), sin(fact*phase))
+                ! phasor(celli,cellj,cellk) = phasor(celli,cellj,cellk) + phasec
 
 
                 call update_pos(xcur, ycur, zcur, celli, cellj, cellk, dcell, .TRUE., dir, delta)
@@ -60,7 +62,7 @@ contains
                 
                 phase = phase + dcell
                 phasec = cmplx(cos(fact*phase), sin(fact*phase))
-
+                ! phasor(celli,cellj,cellk) = phasor(celli,cellj,cellk) + phasec
                 call update_pos(xcur, ycur, zcur, celli, cellj, cellk, dcell, .FALSE., dir, delta)
                 exit
             end if

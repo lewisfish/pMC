@@ -32,11 +32,12 @@ implicit none
 
             !sets all arrays to zero
             implicit none
-
+            rhokap = 0.
             xface = 0.
             yface = 0.
             zface = 0.
-
+            phasor= cmplx(0.,0.)
+            phasorGLOBAL = cmplx(0.,0.)
             imageb = cmplx(0.d0, 0.d0)
             imagebGLOBAL = cmplx(0.d0, 0.d0)
 
@@ -74,8 +75,13 @@ implicit none
             inquire(iolength=i)zface
             call chck_mem(cnt, i, limit, 'zface', numproc)
 
-            allocate(imageb(-2000:2000, -2000:2000))
-            allocate(imagebGLOBAL(-2000:2000, -2000:2000))
+            allocate(imageb(-50:50, -50:50))
+            allocate(imagebGLOBAL(-50:50, -50:50))
+
+            allocate(rhokap(nxg, nyg, nzg))
+
+            allocate(phasor(nxg,nyg,nzg))
+            allocate(phasorGLOBAL(nxg,nyg,nzg))
 
 
             if(id == 0)print'(A,1X,F5.2,A)','allocated:',dble(cnt)/dble(limit)*100.d0,' % of total RAM'

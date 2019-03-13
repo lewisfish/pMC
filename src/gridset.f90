@@ -6,7 +6,7 @@ module gridset_mod
         subroutine gridset(id)
 
             use constants, only : nxg, nyg, nzg, xmax, ymax, zmax
-            use iarray,    only : xface, yface, zface
+            use iarray,    only : xface, yface, zface, rhokap
             use ch_opt,    only : init_opt4
             use opt_prop,  only : kappa
 
@@ -14,7 +14,7 @@ module gridset_mod
 
             integer, intent(IN) :: id
             integer :: i, j, k
-            real    :: x, y, z
+            real    :: x, y, z, taueq, taupole
 
             if(id == 0)then
                 print*, ' '
@@ -54,10 +54,27 @@ module gridset_mod
                         !       rhokap(i,j,k)=kappa
                         !    end if
                         ! else
-                           ! rhokap(i,j,k)=kappa
+                           rhokap(i,j,k)=kappa
                         ! end if
                     end do
                 end do
             end do
+
+            taueq   = 0.
+            taupole = 0.
+
+            do i = 1, nxg
+                taueq = taueq + rhokap(i,nyg/2,nzg/2)
+            end do
+
+            do i = 1, nzg
+                taupole = taupole + rhokap(nxg/2,nyg/2,i)
+            end do
+
+            taueq = taueq * 2. * xmax/nxg
+            taupole = taupole * 2. * zmax/nzg
+            if(id == 0)print*,taupole, "taupole"
+            if(id == 0)print*,taueq, "taueq"
+
         end subroutine gridset
 end module gridset_mod

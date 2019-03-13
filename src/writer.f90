@@ -15,7 +15,7 @@ module writer_mod
     contains
         subroutine writer(nphotons, numproc)
 
-            ! use iarray,          only : phasorGLOBAL
+            use iarray,          only : phasorGLOBAL
             use utils,           only : str
             use iso_fortran_env, only : int64
 
@@ -27,15 +27,15 @@ module writer_mod
             character(len=256)  :: filename
 
 
-            ! filename = 'jmean/testp.raw'
+            filename = 'jmean/testp.raw'
             
-            ! call write_binary(trim(filename), real(phasorGLOBAL))
-            ! print*,trim(filename)
+            call write_binary(trim(filename), real(phasorGLOBAL))
+            print*,trim(filename)
 
-            ! filename = 'jmean/test.raw'
+            filename = 'jmean/test.raw'
             
-            ! call write_binary(trim(filename), abs(phasorGLOBAL)**2)
-            ! print*,trim(filename)
+            call write_binary(trim(filename), abs(phasorGLOBAL)**2)
+            print*,trim(filename)
 
         end subroutine writer
 

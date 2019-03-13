@@ -6,7 +6,7 @@
 1.38              n2
 bessel            beam
 12.7d-3           raxicon in m
-1.497620101       naxicon 
+1.4630       naxicon 
 10.d-3            dist_to_skin in m
 0                 l - order of bessel beam
-2.34375d0         conc   [0.d0, .39841d0, .79365d0, 1.18577d0, 1.57480d0, 1.96078, 2.34375]
+6.    vol   [0., 2., 4., 6., 8., 10., 12.]

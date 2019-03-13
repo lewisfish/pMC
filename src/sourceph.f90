@@ -10,7 +10,7 @@ MODULE sourceph_mod
     CONTAINS
         subroutine sourceph(xcell, ycell, zcell,raxi, dtoskin, iseed)
 
-            use constants,   only : nxg, nyg, nzg, xmax, ymax, zmax
+            use constants,   only : nxg, nyg, nzg, xmax, ymax, zmax, beam
             use photon_vars, only : xp, yp, zp
 
             implicit none
@@ -19,9 +19,13 @@ MODULE sourceph_mod
             integer,          intent(INOUT) :: iseed
             real, intent(IN) :: raxi, dtoskin
 
-            call bessel(raxi, dtoskin, iseed)
+            if(beam == "bessel")then
+                call bessel(raxi, dtoskin, iseed)
+            elseif(beam == "gaussian")then
+                call gaussian_plano(iseed)
+            end if
             ! do
-            ! call gaussian_plano(iseed)
+
             ! call gaussian_aspeheric(iseed)
             xcell = int(nxg * (xp + xmax) / (2. * xmax)) + 1
             ycell = int(nyg * (yp + ymax) / (2. * ymax)) + 1
@@ -66,7 +70,7 @@ MODULE sourceph_mod
             phase = n*zp
 
             x0 = ranu(-xmax , xmax , iseed)!2.*sqrt(2.)*xmax * ran*sin(37.*pi/180.)!ranu(-xmax, xmax, iseed)
-            y0 = ranu(-xmax , xmax , iseed)!2.*sqrt(2.)*xmax * ran*cos(37.*pi/180.)!ranu(-ymax, ymax, iseed)
+            y0 = ranu(-ymax , ymax , iseed)!2.*sqrt(2.)*xmax * ran*cos(37.*pi/180.)!ranu(-ymax, ymax, iseed)
             z0 = (r_pos* tana) + d + zp !11.1mm   => r_pos*tana is distane from lens surface to plane at tip of axicon
 
             dist = sqrt((x0 - xp)**2 + (y0 - yp)**2 + (z0 - zp)**2)
@@ -131,22 +135,19 @@ MODULE sourceph_mod
             logical :: flag
 ! https://www.thorlabs.com/newgrouppage9.cfm?objectgroup_id=123
             lensThickness = 2.2d-3
-            focalBack = 8.5d-3
+            focalBack = 8.5d-3 - zmax
+            ! focalBack = 27.56801669d-3 - lensThickness
             R = 4.6d-3
+            ! R = 12.63993565d-3
             n1 = 1.d0
             n2 = 1.4585d0
             centre = vector(0.d0, 0.d0, (focalBack + lensThickness) - R)
             radlens = 2.5d-3
 
             zi = focalBack + lensThickness + 2.*zmax
-            ! do
+
             call rang(xi, yi, 0.d0, 1.d-3/4.d0, iseed)
-            !     if(sqrt(xi**2 + yi**2) > .5d-3)then
-            !         cycle
-            !     else
-            !         exit
-            !     end if
-            ! end do
+    
             orig = vector(xi, yi, zi)
             dirI = vector(0.d0, 0.d0, -1.d0)
 
@@ -155,14 +156,13 @@ MODULE sourceph_mod
 
             N = (lensI - centre)
             N = N%magnitude()
-            ! print*,N
+
             dirL = dirI
 
             call reflect_refract(dirL, N, n1, n2, iseed, flag)
 
             zL = focalBack
             distLens = (zL - lensI%z) / (dirL%z)
-            ! print*,zl, lensI%z, dirL%z
 
             if(distLens < 0.d0)then
                 print*,zl, lensI%z, dirL%z

@@ -68,20 +68,31 @@ contains
    
    implicit none
 
-   real    :: b
+   real    :: b, conc, fact
+   integer :: i
 
-   ! conc = [0.d0, .39841d0, .79365d0, 1.18577d0, 1.57480d0]
 
    hgg = 0.7
    g2  = hgg**2.
    mua = 0.d0
 
-   mus = 3.873d9 * wave**(-2.397d0)
-   b = 6.98d0*conc**(-.96d0)
-   mus = (mus) / b
+   !calculate scat particle volume conc from volume using 22.7% scat particle% in IL 20%
+   conc = (vol / 500.d0) * 22.7d0
+   conc = conc / 100.d0
 
-   kappa  = mus + mua 
-   albedo = mus / kappa
+   mus = 1.868d0 * (10**10) * wave**(-2.59d0) !get mus for 20% IL
+   fact = conc / .227d0 ! scaling factor
+   mus = mus * fact ! scale mus to n% IL linearly
+   mus = mus * 1000.
+
+   if(conc == 0.d0)then
+      kappa  = 1d-10 
+      albedo = 1d-10
+      mus = 0.d0
+   else 
+      kappa  = mus + mua 
+      albedo = mus / kappa
+   end if
 
    end subroutine init_opt4
 

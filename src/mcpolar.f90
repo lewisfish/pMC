@@ -59,7 +59,7 @@ program mcpolar
     read(u,*) n
     read(u,*) dtoskin
     read(u,*) l
-    read(u,*) conc
+    read(u,*) vol
 
     close(u)
 
@@ -83,8 +83,8 @@ program mcpolar
     v(2) = sintim * sinpim
     v(3) = costim
 
-    binwid = 2.*1.d-3/2000.
-    wavelength = 488d-9
+    binwid = xmax/50.!1.d-3/2000.
+    wavelength = 488.d-9
     wave = wavelength * 1d9
     call init_opt4
 
@@ -116,10 +116,10 @@ program mcpolar
         phase = 0.d0
         tflag=.FALSE.
 
-        if(j == 1000000 .and. id == 0)then
+        if(j == 100000 .and. id == 0)then
             call cpu_time(finish2)
             print*,' '
-            tmp = (finish2-start2)/1000000.*real(nphotons)
+            tmp = (finish2-start2)/100000.*real(nphotons)
             if(tmp >= 60.)then
                 tmp = tmp / 60.
                 if(tmp > 60)then
@@ -163,15 +163,15 @@ program mcpolar
         end do
         ! stop
         if(xcell /= -1 .and. ycell /= -1 .and. tflag)then
-                idx = floor((xp)/binwid) + 0
-                idy = floor((yp)/binwid) + 0
+                idx = nint((xp)/binwid)
+                idy = nint((yp)/binwid)
                 imageb(idx, idy) = imageb(idx, idy) + cmplx(cos((phase * fact)), sin(phase * fact))
         end if
 
     end do      ! end loop over nph photons
 
     call mpi_reduce(imageb, imagebGLOBAL, size(imageb), mpi_double_complex, mpi_sum, 0, mpi_comm_world, error)
-    ! call mpi_reduce(phasor, phasorGLOBAL, size(phasor), mpi_double_complex, mpi_sum, 0, mpi_comm_world, error)
+    call mpi_reduce(phasor, phasorGLOBAL, size(phasor), mpi_double_complex, mpi_sum, 0, mpi_comm_world, error)
 
     call mpi_reduce(nscatt, nscattGLOBAL, 1, mpi_double, mpi_sum, 0, mpi_comm_world, error)
 
@@ -188,7 +188,7 @@ program mcpolar
         !write out files
         allocate(outer(size(imageb,1), size(imageb,2)))
         outer = cabs(imagebGLOBAL)**2
-        open(newunit=u,file="bessel-peel-"//str(conc,4)//".dat",access="stream",form="unformatted",status="replace")
+        open(newunit=u,file=trim(beam)//"-test-"//str(vol,4)//".dat",access="stream",form="unformatted",status="replace")
         write(u)outer
         close(u)
 
