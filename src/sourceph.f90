@@ -24,23 +24,17 @@ MODULE sourceph_mod
             elseif(beam == "gaussian")then
                 call gaussian_plano(iseed)
             end if
-            ! do
 
-            ! call gaussian_aspeheric(iseed)
             xcell = int(nxg * (xp + xmax) / (2. * xmax)) + 1
             ycell = int(nyg * (yp + ymax) / (2. * ymax)) + 1
             zcell = int(nzg * (zp + zmax) / (2. * zmax)) + 1
-            ! print*,xcell, ycell, xp, yp
-            ! print*,xcell,ycell,zcell,nzg
-            ! if(xcell <= nxg .and. ycell <= nyg .and. zcell <= nzg)exit
-            ! end do
-            ! stop
+
         end subroutine sourceph
 
 
         subroutine bessel(Raxi, d, iseed)
 
-            use constants,   only : nzg, xmax, zmax, ymax,pi, twopi
+            use constants,   only : nzg, xmax, zmax, ymax,pi, twopi, waist
             use opt_prop,    only : n, wavelength
             use photon_vars, only : xp, yp, zp, sint, cost, sinp, cosp, phi, phase, nxp, nyp, nzp, l
 
@@ -49,36 +43,30 @@ MODULE sourceph_mod
             integer, intent(INOUT) :: iseed
             real, intent(IN) :: raxi, d
 
-            real :: r_pos, tana, x0, y0, z0, dist!,a1,r0,f
+            real :: r_pos, tana, x0, y0, z0, dist
 
-            ! axi_thickness = .11d0 ! 1.1mm
-            ! Raxi = 2.54d0/2.d0 !25.4/2mm
-            ! d = 1.11d0! 11.1mm
+
+            n = Sellmeier(wavelength * 1d6)
 
             phase = 0.d0
-            tana = tan(5.d0*pi/180.d0)
-            !top of axicon
-            ! do
-                call rang(xp, yp, 0.d0, 1.d-3/4.d0, iseed)
-            ! y = qrang(0.d0, 1.d-3/4.d0, iseed)
+            tana = tan(getAlpha(n, waist, getfocal(4.6d-3, n)))!tan(5.d0 * pi / 180.d0)!
 
-                r_pos = sqrt(xp**2 + yp**2)
-            !     if(r_pos < .5d-3)exit
-            ! end do
+            !generate gaussian profile at top of axicon
+            call rang(xp, yp, 0.d0, sqrt(2.d0)*waist/4.d0, iseed)
+            r_pos = sqrt(xp**2 + yp**2)
             zp = (raxi - r_pos) * tana
 
-            phase = n*zp
+            !distance through axicon
+            phase = zp * n
 
-            x0 = ranu(-xmax , xmax , iseed)!2.*sqrt(2.)*xmax * ran*sin(37.*pi/180.)!ranu(-xmax, xmax, iseed)
-            y0 = ranu(-ymax , ymax , iseed)!2.*sqrt(2.)*xmax * ran*cos(37.*pi/180.)!ranu(-ymax, ymax, iseed)
+            !sample mediums surface
+            x0 = ranu(-xmax , xmax , iseed)
+            y0 = ranu(-ymax , ymax , iseed)
             z0 = (r_pos* tana) + d + zp !11.1mm   => r_pos*tana is distane from lens surface to plane at tip of axicon
 
             dist = sqrt((x0 - xp)**2 + (y0 - yp)**2 + (z0 - zp)**2)
 
             phase = phase + dist
-            ! z0 = z0 + 2.*zmax
-            ! dist = sqrt((x0 - xp)**2 + (y0 - yp)**2 + (z0 - zp)**2)
-
 
             nxp = (x0 - xp) / dist
             nyp = (y0 - yp) / dist
@@ -92,94 +80,92 @@ MODULE sourceph_mod
             cosp = cos(phi)
             sinp = sin(phi)
 
-            ! zp = zmax - (1.e-5*(2.*zmax/nzg))
-            ! dist = (zp - z0) / nzp
-            ! xp = x0 + dist * nxp
-            ! yp = y0 + dist * nyp
-
 
             xp = x0
             yp = y0
             zp = zmax - (1.e-5*(2.*zmax/nzg))
 
+            if(l > 0)then
+                phase = phase + (l*wavelength * modulo(phi, twopi / l)) / (twopi)
+            end if
 
-            ! A1 = wavelength
-            ! R0 = 1d-3
-            ! f = 10d-3
-
-            phase = phase + l*phi*wavelength/((n - 1.d0)*twopi)  !higher order bessel shizz => helical axicon
             !airy beam? -(((xp)**2 + (yp)**2)/(2.d0*f))-(10.)*a1*(((xp)**3+(yp)**3)/(r0**3))
-            ! phase = phase + l*modulo(phi, twopi/l)*wavelength/((n - 1.d0)*2.*twopi)  !higher order bessel shizz => helical axicon
-
-           
-
          end subroutine bessel
 
 
         subroutine gaussian_plano(iseed)
 
-            use constants,   only : xmax, ymax, zmax, nzg, pi
-            use photon_vars, only : xp, yp, zp, phase, nxp, nyp, nzp, sint, cost, sinp, cosp, phi
+            use constants,   only : xmax, ymax, zmax, nzg, waist
+            use photon_vars, only : xp, yp, zp, phase, nxp, nyp, nzp, sint, cost, sinp, cosp, phi, l
+            use opt_prop,    only : wavelength
             use inttau2,     only : reflect_refract
  
-
+            use unisample
             use vector_class
 
             implicit none
 
             integer, intent(INOUT) :: iseed
-
-            real :: xi, yi, zi, focalBack, lensThickness, R, t, ZL, n1, n2, distLens, distAir, radlens, thetamin, thetamax, dist,c
-            real :: ran2
-            type(vector) :: orig, dirI, centre, lensI, N, dirL, lensF, final, dirF, dir
+            real :: R, t, n1, n2, lensThickness, distLens, distAir, backfocal, zL, xi,yi,zi
+            type(vector) :: orig, diri, centre, LensI, N, dirL, lensF
             logical :: flag
-! https://www.thorlabs.com/newgrouppage9.cfm?objectgroup_id=123
-            lensThickness = 2.2d-3
-            focalBack = 8.5d-3 - zmax
-            ! focalBack = 27.56801669d-3 - lensThickness
+
             R = 4.6d-3
-            ! R = 12.63993565d-3
             n1 = 1.d0
-            n2 = 1.4585d0
-            centre = vector(0.d0, 0.d0, (focalBack + lensThickness) - R)
-            radlens = 2.5d-3
+            n2 = Sellmeier(wavelength * 1d6)
+            phase = 0.d0
+            lensThickness = 2.2d-3
+            backfocal = getfocal(r, n2) - (lensThickness / n2) !8.5d-3
 
-            zi = focalBack + lensThickness + 2.*zmax
+            !get x, y in gaussian dist
+            call rang(xi, yi, 0.d0, sqrt(2.)*waist/4.d0, iseed)
+            do
 
-            call rang(xi, yi, 0.d0, 1.d-3/4.d0, iseed)
-    
+            zi = -10.d-3
+
+            !init pos/direction of photon
             orig = vector(xi, yi, zi)
-            dirI = vector(0.d0, 0.d0, -1.d0)
+            dirI = vector(0.d0, 0.d0, 1.d0)
 
-            if(.not. intersect(orig, dirI, t, centre, R))error stop "No lens intersection!"
-            lensI = orig + t*dirI
+            !centre of lens defining sphere
+            centre = vector(0.d0, 0.d0, R)
 
-            N = (lensI - centre)
+            !get intersection point as func of t
+            if(intersect(orig, dirI, t, centre, R))exit
+            end do
+
+            !get real po on lens surface
+            LensI = orig + t * dirI
+            
+            !get normal on lens surface
+            N = (LensI - centre)
             N = N%magnitude()
 
+            !do fresnel refraction
+            flag = .false.
+            call reflect_refract(dirI, N, n1, n2, iseed, flag)
             dirL = dirI
 
-            call reflect_refract(dirL, N, n1, n2, iseed, flag)
-
-            zL = focalBack
-            distLens = (zL - lensI%z) / (dirL%z)
-
+            !move photon to far side of lens
+            zL = lensThickness
+            distLens = (zL - LensI%z) / dirL%z
             if(distLens < 0.d0)then
-                print*,zl, lensI%z, dirL%z
-                error stop "Negative distance travelled in lens!"
+                error stop
             end if
-            lensF = lensI + distLens*dirL
+            LensF = LensI + distLens * dirL
 
-            final = vector(ranu(-xmax, xmax, iseed), ranu(-ymax, ymax, iseed), zmax - (1.e-5*(2.*zmax/nzg)))
+            !sample on medium surface
+            xp = ranu(-xmax, xmax, iseed)
+            yp = ranu(-ymax, ymax, iseed)
+            zp = (backfocal + lensThickness) - zmax
+            zi = zp
 
-            distAir = sqrt((final%x - LensF%x)**2 + (final%y - LensF%y)**2 + (final%z - LensF%z)**2)
+            distAir = sqrt((LensF%x - xp)**2 + (LensF%y - yp)**2 + (LensF%z - zp)**2)
 
-            dirF = (final - lensF) / distAir
-
-            nxp = dirF%x
-            nyp = dirF%y
-            nzp = dirF%z
-            if(nzp > 0.d0)error stop
+            nxp = (xp - LensF%x) / distAir
+            nyp = (yp - LensF%y) / distAir
+            ! force -ive as thats how MCRT code is setup
+            nzp = -abs((zp - LensF%z) / distAir)
 
             phi = atan2(nyp, nxp)
             cosp = cos(phi)
@@ -188,11 +174,10 @@ MODULE sourceph_mod
             cost = nzp
             sint = sqrt(1.d0 - cost**2)
 
-            xp = final%x
-            yp = final%y
-            zp = final%z
+            phase = distAir + LensI%z + distLens*n2
+            zp = zmax - (1.e-5*(2.*zmax/nzg))
 
-            phase = distAir + distLens*n2 + (orig%z - lensI%z)
+
         end subroutine gaussian_plano
 
 
@@ -213,7 +198,6 @@ MODULE sourceph_mod
             real :: zadj, zL
             type(vector) :: orig, dirI, centre, lensI, N, dirL, lensF, final, dirF
             logical :: flag
-            integer :: i
 
             !thor labs lens 354220-C
             as = [8.924167d-5, 4.38436d-7, 0.d0, 0.d0, 0.d0]
@@ -226,7 +210,6 @@ MODULE sourceph_mod
             radlens = 5.5d-3 / 2.d0
             centre = vector(0.d0, 0.d0, (focalBack + lensThickness) - R)
 
-            ! do i = 1, 1000
             zi = focalBack + lensThickness + zmax
             do
                 call rang(xi, yi, 0.d0, 1.d-3/4.d0, iseed)
@@ -234,14 +217,12 @@ MODULE sourceph_mod
             end do
             orig = vector(xi, yi, zi)
             dirI = vector(0.d0, 0.d0, -1.d0)
-            ! print*,orig
             zi = focalBack + lensThickness ! @ plane from where sag is defined
 
             zadj = aspheric(sqrt(xi**2+yi**2), R, k, as)
             zi = zi - zadj
 
             lensI = vector(xi, yi, zi) !on front surface of lens
-            ! print*,lensI
             !!get normal
             N = grad(lensI%x, lensI%y, R, k, as, 1d-8)!grad_aspher(xi, yi, R, k, as)
 
@@ -255,15 +236,7 @@ MODULE sourceph_mod
                 error stop "neg distance"
             end if
             lensF = lensI + distLens*dirL !@ lend face back
-            ! print*,lensF
 
-
-            ! N = vector(0.d0, 0.d0, 1.d0)
-            ! call reflect_refract(dirL, N, n2, n1, iseed, flag)
-            ! final%z = zmax - (1.e-5*(2.*zmax/nzg))
-            ! distAir = (final%z - lensF%z)/dirL%z
-            ! final = lensF + distAir * dirL
-            ! print*,final
             final = vector(ranu(-xmax, xmax, iseed), ranu(-ymax, ymax, iseed), zmax - (1.e-5*(2.*zmax/nzg))) !@ in medium
             distAir = sqrt((final%x - LensF%x)**2 + (final%y - LensF%y)**2 + (final%z - LensF%z)**2)
 
@@ -286,11 +259,7 @@ MODULE sourceph_mod
             zp = final%z
 
             phase = distAir + distLens*n2 + (orig%z - lensI%z)
-            ! print*,
-            ! print*,
-        ! end do
-        ! print*,0.d0, 0.d0, 0.d0
-        ! stop
+
         end subroutine gaussian_aspeheric
 
 
@@ -510,69 +479,47 @@ MODULE sourceph_mod
 
         end function ranu
 
+
+        real function Sellmeier(wave)
+        ! Sellmeier equation for fused quatrz
+        ! I. H. Malitson. Interspecimen comparison of the refractive index of fused silica
+            implicit none
+
+            real, intent(IN) :: wave
+            real :: wave2, a, b ,c
+
+            wave2 = wave**2
+
+            a = (0.6961663d0*wave2)/(wave2 - 0.0684043d0**2)
+            b = (0.4079426*wave2) / (wave2 - .1162414**2)
+            c = (0.8974794*wave2) / (wave2 - 9.896161**2)
+
+            Sellmeier = sqrt(1.d0 + (a + b + c))
+
+        end function Sellmeier
+
+
+        real function getAlpha(n, d, f)
+        ! n is refractive index
+        ! d is diameter waist 1/e^2
+        ! f is focal length
+            implicit none
+
+            real, intent(IN) :: n, d, f
+
+            getAlpha = (1.d0 / (n - 1.d0)) * asin((1.75d0 * d) / (4.d0 * f))
+
+        end function getAlpha
+
+
+        real function getfocal(r, n)
+
+            implicit none
+
+            real, intent(IN) :: r, n
+
+            getfocal = r / (n - 1.d0)
+
+        end function getfocal
+
 end MODULE sourceph_mod
-
-            ! real :: xi, yi, zi, R, t, n1, n2, lensThickness, zl, xl, yl, distLens, distAir, backfocal
-            ! type(vector) :: posi, diri, centre, lensS, N, dirL
-            ! logical :: flag
-
-            ! R = 8.7d-3!4.6d-3
-            ! n1 = 1.d0
-            ! n2 = 1.4338d0!1.458d0
-            ! lensThickness = 4.3d-3!2.2d-3
-            ! backfocal = 17.0d-3!8.5d-3
-
-            ! !get x, y in gaussian dist
-            ! call rang(xi, yi, 0.d0, 1.d-3/4.d0, iseed)
-            ! zi = -10.d-3
-
-            ! !init pos/direction of photon
-            ! posi = vector(xi, yi, zi)
-            ! diri = vector(0.d0, 0.d0, 1.d0)
-
-            ! !centre of lens defining sphere
-            ! centre = vector(0.d0, 0.d0, R)
-
-            ! !get intersection point as func of t
-            ! if(.not.intersect(posi, diri, t, centre, R))error stop
-
-            ! !get real po on lens surface
-            ! lensS = posi + t * diri
-            
-            ! !get normal on lens surface
-            ! N = (lensS - centre)
-            ! N = N%magnitude()
-
-            ! !do fresnel refraction
-            ! flag = .false.
-            ! call reflect_refract(diri, N, n1, n2, iseed, flag)
-            ! dirL = diri
-
-            ! !move photon to far side of lens
-            ! zL = lensThickness
-            ! distLens = (zL - lensS%z) / dirL%z
-            ! if(distLens < 0.d0)error stop
-            ! xL = xi + distLens * dirL%x
-            ! yL = yi + distLens * dirL%y
-
-            ! !sample on medium surface
-            ! xp = ranu(-xmax, xmax, iseed)
-            ! yp = ranu(-ymax, ymax, iseed)
-            ! zp = (backfocal + lensThickness) - zmax
-
-            ! distAir = sqrt((xL - xp)**2 + (yL - yp)**2 + (zL - zp)**2)
-
-            ! nxp = (xp - xL) / distAir
-            ! nyp = (yp - yL) / distAir
-            ! ! force -ive as thats how MCRT code is setup
-            ! nzp = -abs((zp - zL) / distAir)
-
-            ! phi = atan2(nyp, nxp)
-            ! cosp = cos(phi)
-            ! sinp = sin(phi)
-
-            ! cost = nzp
-            ! sint = sqrt(1.d0 - cost**2)
-
-            ! phase = distAir + distLens*n2 + lensS%z
-            ! zp = zmax - (1.e-5*(2.*zmax/nzg))

@@ -11,10 +11,10 @@ contains
     !optical depth integration subroutine
     !
     !
-        use constants,   only : xmax, ymax, zmax, fact
+        use constants,   only : xmax, ymax, zmax, fact, energy
         use photon_vars, only : xp, yp, zp, phase
         use opt_prop, only : kappa
-        ! use iarray, only : phasor
+        use iarray, only : phasor
 
         implicit none
 
@@ -50,9 +50,10 @@ contains
                 d = d + dcell
 
                 phase = phase + dcell
-                phasec = cmplx(cos(fact*phase), sin(fact*phase))
-                ! phasor(celli,cellj,cellk) = phasor(celli,cellj,cellk) + phasec
 
+                phasec = energy * cmplx(cos(fact*phase), sin(fact*phase))
+                phasor(celli,cellj,cellk) = phasor(celli,cellj,cellk) + phasec
+                ! jmean(celli, cellj, cellk) = jmean(celli, cellj, cellk) + dcell
 
                 call update_pos(xcur, ycur, zcur, celli, cellj, cellk, dcell, .TRUE., dir, delta)
             else
@@ -62,7 +63,8 @@ contains
                 
                 phase = phase + dcell
                 phasec = cmplx(cos(fact*phase), sin(fact*phase))
-                ! phasor(celli,cellj,cellk) = phasor(celli,cellj,cellk) + phasec
+                phasor(celli,cellj,cellk) = phasor(celli,cellj,cellk) + phasec
+                ! jmean(celli, cellj, cellk) = jmean(celli, cellj, cellk) + dcell
                 call update_pos(xcur, ycur, zcur, celli, cellj, cellk, dcell, .FALSE., dir, delta)
                 exit
             end if
@@ -125,7 +127,7 @@ contains
         wall_dist = min(dx, dy, dz)
         if(wall_dist < 0.)then
             print*,'dcell < 0.0 warning! ',wall_dist,dx,dy,dz,nxp,nyp,nzp
-            error stop 1
+            ! error stop 1
         end if
         if(wall_dist == dx)dir=(/.TRUE., .FALSE., .FALSE./)
         if(wall_dist == dy)dir=(/.FALSE., .TRUE., .FALSE./)
@@ -277,12 +279,12 @@ contains
 
             rflag = .FALSE.
 
-            ! if(ran2(iseed) <= fresnel(I, N, n1, n2))then
-            !     call reflect(I, N)
-            !     rflag = .true.
-            ! else
+            if(ran2(iseed) <= fresnel(I, N, n1, n2))then
+                ! call reflect(I, N)
+                rflag = .true.
+            else
                 call refract(I, N, n1/n2)
-            ! end if
+            end if
 
         end subroutine reflect_refract
 
@@ -330,7 +332,8 @@ contains
             else
                 Ntmp = (-1.) * N
             end if
-            c2 = sqrt(1. - (eta)**2 * (1.-c1**2))
+
+            c2 = sqrt(1.d0 - (eta)**2 * (1.d0 - c1**2))
 
             T = eta*I + (eta * c1 - c2) * Ntmp 
 

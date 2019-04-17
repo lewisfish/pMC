@@ -40,6 +40,8 @@ implicit none
             phasorGLOBAL = cmplx(0.,0.)
             imageb = cmplx(0.d0, 0.d0)
             imagebGLOBAL = cmplx(0.d0, 0.d0)
+            jmean = 0.d0
+            jmeanGLOBAL = 0.d0
 
         end subroutine zarray
 
@@ -76,12 +78,35 @@ implicit none
             call chck_mem(cnt, i, limit, 'zface', numproc)
 
             allocate(imageb(-50:50, -50:50))
+            inquire(iolength=i)imageb
+            call chck_mem(cnt, i, limit, 'imageb', numproc)
+
             allocate(imagebGLOBAL(-50:50, -50:50))
+            inquire(iolength=i)imagebGLOBAL
+            call chck_mem(cnt, i, limit, 'imagebGLOBAL', numproc)
+
 
             allocate(rhokap(nxg, nyg, nzg))
+            inquire(iolength=i)rhokap
+            call chck_mem(cnt, i, limit, 'rhokap', numproc)
+
+            allocate(jmean(nxg, nyg, nzg))
+            inquire(iolength=i)jmean
+            call chck_mem(cnt, i, limit, 'jmean', numproc)
+
+            allocate(jmeanGLOBAL(nxg, nyg, nzg))
+            inquire(iolength=i)jmeanGLOBAL
+            call chck_mem(cnt, i, limit, 'jmeanGLOBAL', numproc)
+
 
             allocate(phasor(nxg,nyg,nzg))
+            inquire(iolength=i)phasor
+            call chck_mem(cnt, i, limit, 'phasor', numproc)
+
             allocate(phasorGLOBAL(nxg,nyg,nzg))
+            inquire(iolength=i)phasorGLOBAL
+            call chck_mem(cnt, i, limit, 'phasorGLOBAL', numproc)
+
 
 
             if(id == 0)print'(A,1X,F5.2,A)','allocated:',dble(cnt)/dble(limit)*100.d0,' % of total RAM'

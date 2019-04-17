@@ -6,7 +6,7 @@ module iarray
 
     real, allocatable :: xface(:), yface(:), zface(:)
     real, allocatable :: rhokap(:,:,:)
-    ! real, allocatable :: jmean(:,:,:), jmeanGLOBAL(:,:,:)
+    real, allocatable :: jmean(:,:,:), jmeanGLOBAL(:,:,:)
 
     ! complex, allocatable :: imaget(:,:), imagetGLOBAL(:,:)
     complex, allocatable :: imageb(:,:), imagebGLOBAL(:,:)

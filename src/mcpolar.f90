@@ -5,7 +5,7 @@ program mcpolar
     use iso_fortran_env, only : int64
 
     !shared data
-    use utils, only : green, blue, bold, colour, red, white_b, black, str
+    use utils, only : blue, bold, colour, red, white_b, black, str
     use constants
     use photon_vars
     use iarray
@@ -14,7 +14,7 @@ program mcpolar
     !subroutines
     use subs
     use gridset_mod
-    use sourceph_mod
+    use sourceph_mod, only :sourceph
     use inttau2
     use ch_opt
     use stokes_mod
@@ -24,15 +24,15 @@ program mcpolar
 
     integer(kind=int64) :: nphotons, j
     integer :: iseed, xcell, ycell, zcell, holdseed, u, idx, idy
-    logical :: tflag
+    logical :: tflag, flag
     real    :: nscatt, raxi, dtoskin, binwid, ran2
     real    :: delta, start, finish, start2, finish2, tmp, phiim, thetaim
 
-    !mpi variables
-    integer :: id, error, numproc
-    real    :: nscattGLOBAL
+    complex :: norm(100,100)
 
-    real, allocatable :: outer(:,:)
+    !mpi variables
+    integer :: id, error, numproc, i
+    real    :: nscattGLOBAL
 
     call MPI_init(error)
     call MPI_Comm_size(MPI_COMM_WORLD, numproc, error)
@@ -60,6 +60,8 @@ program mcpolar
     read(u,*) dtoskin
     read(u,*) l
     read(u,*) vol
+    read(u,*) pwr
+    read(u,*) waist
 
     close(u)
 
@@ -84,12 +86,15 @@ program mcpolar
     v(3) = costim
 
     binwid = xmax/50.!1.d-3/2000.
-    wavelength = 488.d-9
+    wavelength = 488d-9
     wave = wavelength * 1d9
+    energy = sqrt((pwr) / ((waist)**2*nphotons))
+
     call init_opt4
 
     fact = twopi/wavelength
     tana = tan(5.d0*pi/180.d0)
+
 
     if(id == 0)then
         print*, ''      
@@ -110,16 +115,19 @@ program mcpolar
     !loop over photons 
     call MPI_Barrier(MPI_COMM_WORLD, error)
     print*,'Photons now running on core: ',colour(id, str(30+mod(id,7)), bold)
+    
+    flag = .true.
+
     do j = 1 , nphotons
 
         call init_opt4
         phase = 0.d0
         tflag=.FALSE.
 
-        if(j == 100000 .and. id == 0)then
+        if(j == 500000 .and. id == 0)then
             call cpu_time(finish2)
             print*,' '
-            tmp = (finish2-start2)/100000.*real(nphotons)
+            tmp = (finish2-start2)/500000.*real(nphotons)
             if(tmp >= 60.)then
                 tmp = tmp / 60.
                 if(tmp > 60)then
@@ -134,13 +142,13 @@ program mcpolar
             print*,' '
         end if
 
-        if(mod(j,1000000_int64) == 0)then
+        if(mod(j,5000000_int64) == 0)then
             print *, colour(j, blue, bold),' scattered photons completed on core: ',colour(id, str(30+mod(id,7)), bold)
         end if
 
         !***** Release photon from point source *******************************
         call sourceph(xcell,ycell,zcell,raxi, dtoskin, iseed)
-
+        ! dist = 0.
         !****** Find scattering location
         call tauint1(xcell,ycell,zcell,tflag,iseed,delta)
 
@@ -149,7 +157,7 @@ program mcpolar
 
             if(ran2(iseed) < albedo)then!interacts with tissue
                   call stokes(iseed)
-                  nscatt = nscatt + 1        
+                  nscatt = nscatt + 1      
                else
 
                   tflag = .true.
@@ -165,13 +173,13 @@ program mcpolar
         if(xcell /= -1 .and. ycell /= -1 .and. tflag)then
                 idx = nint((xp)/binwid)
                 idy = nint((yp)/binwid)
-                imageb(idx, idy) = imageb(idx, idy) + cmplx(cos((phase * fact)), sin(phase * fact))
+                imageb(idx, idy) = imageb(idx, idy) + cmplx(cos((phase * fact)), -sin(phase * fact))
         end if
 
     end do      ! end loop over nph photons
-
     call mpi_reduce(imageb, imagebGLOBAL, size(imageb), mpi_double_complex, mpi_sum, 0, mpi_comm_world, error)
     call mpi_reduce(phasor, phasorGLOBAL, size(phasor), mpi_double_complex, mpi_sum, 0, mpi_comm_world, error)
+    call mpi_reduce(jmean, jmeanGLOBAL, size(jmean), mpi_double_precision, mpi_sum, 0, mpi_comm_world, error)
 
     call mpi_reduce(nscatt, nscattGLOBAL, 1, mpi_double, mpi_sum, 0, mpi_comm_world, error)
 
@@ -185,14 +193,14 @@ program mcpolar
 
     if(id == 0)then
         print*,'Average # of scatters per photon:',nscattGLOBAL/(nphotons*numproc)
-        !write out files
-        allocate(outer(size(imageb,1), size(imageb,2)))
-        outer = cabs(imagebGLOBAL)**2
-        open(newunit=u,file=trim(beam)//"-test-"//str(vol,4)//".dat",access="stream",form="unformatted",status="replace")
-        write(u)outer
-        close(u)
+        ! !write out files
+        ! allocate(outer(size(imageb,1), size(imageb,2)))
+        ! outer = cabs(imagebGLOBAL)**2
+        ! open(newunit=u,file=trim(beam)//"-1.dat",access="stream",form="unformatted",status="replace")
+        ! write(u)outer
+        ! close(u)
 
-        ! call writer(nphotons, numproc)
+        call writer()
         print*,colour('write done',black,white_b,bold)
     end if
 

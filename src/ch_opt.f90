@@ -68,22 +68,21 @@ contains
    
    implicit none
 
-   real    :: b, conc, fact
-   integer :: i
-
+   real    :: conc, fact
 
    hgg = 0.7
    g2  = hgg**2.
    mua = 0.d0
 
-   !calculate scat particle volume conc from volume using 22.7% scat particle% in IL 20%
+   !calculate scat particle volume conc from volume using 22.7% scat particle% in IL 20% 500uL of water
    conc = (vol / 500.d0) * 22.7d0
    conc = conc / 100.d0
 
-   mus = 1.868d0 * (10**10) * wave**(-2.59d0) !get mus for 20% IL
-   fact = conc / .227d0 ! scaling factor
+   mus = 3.873d9 * wave**(-2.397d0) !get mus for 20% IL in cm^-1
+   fact = conc / 0.227d0 ! scaling factor
    mus = mus * fact ! scale mus to n% IL linearly
-   mus = mus * 1000.
+   mus = mus * 100.d0 ! convert to m^-1
+
 
    if(conc == 0.d0)then
       kappa  = 1d-10 
