@@ -62,7 +62,7 @@ contains
                 d = d + dcell
                 
                 phase = phase + dcell
-                phasec = cmplx(cos(fact*phase), sin(fact*phase))
+                phasec = energy * cmplx(cos(fact*phase), sin(fact*phase))
                 phasor(celli,cellj,cellk) = phasor(celli,cellj,cellk) + phasec
                 ! jmean(celli, cellj, cellk) = jmean(celli, cellj, cellk) + dcell
                 call update_pos(xcur, ycur, zcur, celli, cellj, cellk, dcell, .FALSE., dir, delta)

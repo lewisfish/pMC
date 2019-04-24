@@ -14,7 +14,7 @@ program mcpolar
     !subroutines
     use subs
     use gridset_mod
-    use sourceph_mod, only :sourceph
+    use sourceph_mod, only : sourceph
     use inttau2
     use ch_opt
     use stokes_mod
@@ -27,8 +27,7 @@ program mcpolar
     logical :: tflag, flag
     real    :: nscatt, raxi, dtoskin, binwid, ran2
     real    :: delta, start, finish, start2, finish2, tmp, phiim, thetaim
-
-    complex :: norm(100,100)
+    real, allocatable:: outer(:,:)
 
     !mpi variables
     integer :: id, error, numproc, i
@@ -88,7 +87,7 @@ program mcpolar
     binwid = xmax/50.!1.d-3/2000.
     wavelength = 488d-9
     wave = wavelength * 1d9
-    energy = sqrt((pwr) / ((waist)**2*nphotons))
+    energy = sqrt((pwr) / ((0.5d0*pi*waist**2))) / nphotons
 
     call init_opt4
 
@@ -170,11 +169,11 @@ program mcpolar
 
         end do
         ! stop
-        if(xcell /= -1 .and. ycell /= -1 .and. tflag)then
-                idx = nint((xp)/binwid)
-                idy = nint((yp)/binwid)
-                imageb(idx, idy) = imageb(idx, idy) + cmplx(cos((phase * fact)), -sin(phase * fact))
-        end if
+        ! if(xcell /= -1 .and. ycell /= -1 .and. tflag)then
+        !         idx = nint((xp)/binwid)
+        !         idy = nint((yp)/binwid)
+        !         imageb(idx, idy) = imageb(idx, idy) + cmplx( energy*cos((phase * fact)), -energy*sin(phase * fact))
+        ! end if
 
     end do      ! end loop over nph photons
     call mpi_reduce(imageb, imagebGLOBAL, size(imageb), mpi_double_complex, mpi_sum, 0, mpi_comm_world, error)

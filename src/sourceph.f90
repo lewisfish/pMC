@@ -1,4 +1,4 @@
-MODULE sourceph_mod
+module sourceph_mod
 
     use vector_class, only : vector, magnitude
 
@@ -7,7 +7,7 @@ MODULE sourceph_mod
     private
     public :: sourceph, ranu
 
-    CONTAINS
+    contains
         subroutine sourceph(xcell, ycell, zcell,raxi, dtoskin, iseed)
 
             use constants,   only : nxg, nyg, nzg, xmax, ymax, zmax, beam
@@ -41,7 +41,7 @@ MODULE sourceph_mod
             implicit none
 
             integer, intent(INOUT) :: iseed
-            real, intent(IN) :: raxi, d
+            real,    intent(IN)    :: raxi, d
 
             real :: r_pos, tana, x0, y0, z0, dist
 
@@ -100,15 +100,15 @@ MODULE sourceph_mod
             use opt_prop,    only : wavelength
             use inttau2,     only : reflect_refract
  
-            use unisample
             use vector_class
 
             implicit none
 
             integer, intent(INOUT) :: iseed
-            real :: R, t, n1, n2, lensThickness, distLens, distAir, backfocal, zL, xi,yi,zi
+
+            real         :: R, t, n1, n2, lensThickness, distLens, distAir, backfocal, zL, xi,yi,zi
             type(vector) :: orig, diri, centre, LensI, N, dirL, lensF
-            logical :: flag
+            logical      :: flag
 
             R = 4.6d-3
             n1 = 1.d0
@@ -157,7 +157,7 @@ MODULE sourceph_mod
             !sample on medium surface
             xp = ranu(-xmax, xmax, iseed)
             yp = ranu(-ymax, ymax, iseed)
-            zp = (backfocal + lensThickness) - zmax
+            zp = (backfocal + lensThickness) - 1.5*zmax
             zi = zp
 
             distAir = sqrt((LensF%x - xp)**2 + (LensF%y - yp)**2 + (LensF%z - zp)**2)
@@ -194,10 +194,10 @@ MODULE sourceph_mod
 
             integer, intent(INOUT) :: iseed
 
-            real :: xi, yi, zi, focalBack, lensThickness, R, n1, n2, distLens, distAir, radlens, as(5), k
-            real :: zadj, zL
+            real         :: xi, yi, zi, focalBack, lensThickness, R, n1, n2, distLens, distAir, radlens, as(5), k
+            real         :: zadj, zL
             type(vector) :: orig, dirI, centre, lensI, N, dirL, lensF, final, dirF
-            logical :: flag
+            logical      :: flag
 
             !thor labs lens 354220-C
             as = [8.924167d-5, 4.38436d-7, 0.d0, 0.d0, 0.d0]
@@ -288,6 +288,7 @@ MODULE sourceph_mod
             implicit none
 
             real, intent(IN) :: x, y, radcurve, k, as(:), step
+
             real :: rdiffplus, r, dx, dy, dz, rdiffminus
 
             r = sqrt(x**2 + y**2)
@@ -306,94 +307,6 @@ MODULE sourceph_mod
             grad = grad%magnitude()
 
         end function grad
-
-        type(vector) function grad_aspher(x, y, R, k, as)
-
-            implicit none
-
-            real, intent(IN) :: x, y, as(:), R, k
-            real :: x1, x2, x3, x4, y1, y2, y3, y4
-            real :: x3top, x3bot1, x3bot2, x4top, x4bot1, x4bot2
-            real :: y3top, y3bot1, y3bot2, y4top, y4bot1, y4bot2
-
-            grad_aspher = vector(0.d0, 0.d0, 0.d0)
-
-            x1 = 4.d0*as(1)*x*(x**2+y**2)
-
-            x2 = 6.d0*as(2)*x*(x**2+y**2)**2 + 8.d0*as(3)*x*(x**2+y**2)**3 + 10.d0*as(4)*x*(x**2+y**2)**4
-
-            x3top = (1.d0+k)*x*sqrt(x**2+y**2)
-            x3bot1 = R**3*sqrt(1.d0 - (((1.d0+k)*(x**2+y**2))/R**2))
-            x3bot2 = (1.d0+sqrt(1.d0 - (((1.d0+k)*(x**2+y**2))/R**2)))**2
-
-            x3 = x3top / (x3bot1 * x3bot2)
-
-            x4top = x
-            x4bot1 = R*sqrt(x**2+y**2) 
-            x4bot2 = (1.d0+sqrt(1.d0 - (((1.d0+k)*(x**2+y**2))/R**2)))
-
-            x4 = x4top / (x4bot1 * x4bot2)
-
-            grad_aspher%x = (x1 + x2 - x3 - x4)
-
-
-            y1 = 4.d0*as(1)*y*(x**2+y**2)
-            y2 = 6.d0*as(2)*y*(x**2+y**2)**2 + 8.d0*as(3)*y*(x**2+y**2)**3 + 10.d0*as(4)*y*(x**2+y**2)**4
-
-            y3top = (1.d0+k)*y*sqrt(x**2+y**2)
-            y3bot1 = R**3*sqrt(1.d0 - (((1.d0+k)*(x**2+y**2))/R**2))
-            y3bot2 = (1.d0+sqrt(1.d0 - (((1.d0+k)*(x**2+y**2))/R**2)))**2
-
-            y3 = y3top / (y3bot1 * y3bot2)
-
-            y4top = y
-            y4bot1 = R*sqrt(x**2+y**2) 
-            y4bot2 = (1.d0+sqrt(1.d0 - (((1.d0+k)*(x**2+y**2))/R**2)))
-
-            y4 = y4top / (y4bot1 * y4bot2)
-
-            grad_aspher%y = (y + y2 - y3 - y4)
-
-            grad_aspher%z = -1.d0
-
-            grad_aspher = grad_aspher%magnitude()
-
-        end function grad_aspher
-
-        logical function solveQuadratic(a, b, c, x0, x1)
-        ! solves quadratic equation given coeffs a, b, and c
-        ! returns true if real soln
-        ! returns x0 and x1
-        ! adapted from scratchapixel
-
-            implicit none
-
-            real, intent(IN)  :: a, b, c
-            real, intent(OUT) :: x0, x1
-
-            real :: discrim, q
-
-            solveQuadratic = .false.
-
-            discrim = b**2 - 4.d0 * a * c
-            if(discrim < 0.d0)then
-                return
-            elseif(discrim == 0.d0)then
-                x0 = -0.5*b/a
-                x1 = x0
-            else
-                if(b > 0.d0)then
-                    q = -0.5d0 * (b + sqrt(discrim))
-                else
-                    q = -0.5d0 * (b - sqrt(discrim))
-                end if
-                x0 = q / a
-                x1 = c / q
-            end if
-            solveQuadratic = .true.
-            return
-
-        end function solveQuadratic
 
 
         logical function intersect(orig, dir, t, centre, radius)

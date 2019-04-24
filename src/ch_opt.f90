@@ -81,7 +81,7 @@ contains
    mus = 3.873d9 * wave**(-2.397d0) !get mus for 20% IL in cm^-1
    fact = conc / 0.227d0 ! scaling factor
    mus = mus * fact ! scale mus to n% IL linearly
-   mus = mus * 100.d0 ! convert to m^-1
+   mus = mus * 1300.d0 ! convert to m^-1
 
 
    if(conc == 0.d0)then

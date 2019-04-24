@@ -1,12 +1,14 @@
-100000000        nphotons    
-.05d-3            xmax in m
-.05d-3            ymax in m
-.05d-3            zmax in m
-1.0	              n1
-1.38              n2
-bessel            beam
-12.7d-3           raxicon in m
+100000000    nphotons    
+.05d-3       xmax in m
+.05d-3       ymax in m
+.1d-3        zmax in m
+1.0	         n1
+1.38         n2
+bessel       beam
+12.7d-3      raxicon in m
 1.4630       naxicon 
-10.d-3            dist_to_skin in m
-0                 l - order of bessel beam
-6.    vol   [0., 2., 4., 6., 8., 10., 12.]
+10.d-3       dist_to_skin in m
+0            l - order of bessel beam
+8.           vol
+15d-3         pwr
+.5d-3         waist

@@ -25,11 +25,11 @@ module writer_mod
 
             character(len=512)  :: filename
 
-            filename = 'testp.raw'!'jmean/bvsg/phase-'//beam(1:1)//'-'//str(pwr,5)//'-'//str(vol,4)//'-'//str(waist,6)//'.raw'
+            filename = 'jmean/bvsg/phase-'//beam(1:1)//'-'//str(pwr,5)//'-'//str(vol,4)//'-'//str(waist,6)//'.raw'
             call write_binary(trim(filename), real(phasorGLOBAL))
             print*,trim(filename)
 
-            filename = 'test-b.raw'!'jmean/bvsg/int-'//beam(1:1)//'-'//str(pwr,5)//'-'//str(vol,4)//'-'//str(waist,6)//'.raw'
+            filename = 'jmean/bvsg/int-'//beam(1:1)//'-'//str(pwr,5)//'-'//str(vol,4)//'-'//str(waist,6)//'.raw'
             call write_binary(trim(filename), cabs(phasorGLOBAL)**2)
             print*,trim(filename)
 
