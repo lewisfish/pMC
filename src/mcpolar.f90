@@ -69,21 +69,6 @@ program mcpolar
 
     holdseed = iseed
 
-    phiim   = 0. * pi/180.
-    thetaim = 180. * pi/180.
-
-    !image postion vector
-    !angle for vector
-    costim = cos(thetaim)
-    sintim = sin(thetaim)
-    sinpim = sin(phiim)
-    cospim = cos(phiim)
-
-    !vector
-    v(1) = sintim * cospim
-    v(2) = sintim * sinpim
-    v(3) = costim
-
     binwid = xmax/50.!1.d-3/2000.
     wavelength = 488d-9
     wave = wavelength * 1d9
@@ -168,12 +153,11 @@ program mcpolar
             call tauint1(xcell,ycell,zcell,tflag,iseed,delta)
 
         end do
-        ! stop
-        ! if(xcell /= -1 .and. ycell /= -1 .and. tflag)then
-        !         idx = nint((xp)/binwid)
-        !         idy = nint((yp)/binwid)
-        !         imageb(idx, idy) = imageb(idx, idy) + cmplx( energy*cos((phase * fact)), -energy*sin(phase * fact))
-        ! end if
+        if(xcell /= -1 .and. ycell /= -1 .and. tflag)then
+                idx = nint((xp)/binwid)
+                idy = nint((yp)/binwid)
+                imageb(idx, idy) = imageb(idx, idy) + cmplx( energy*cos((phase * fact)), -energy*sin(phase * fact))
+        end if
 
     end do      ! end loop over nph photons
     call mpi_reduce(imageb, imagebGLOBAL, size(imageb), mpi_double_complex, mpi_sum, 0, mpi_comm_world, error)
@@ -183,23 +167,23 @@ program mcpolar
     call mpi_reduce(nscatt, nscattGLOBAL, 1, mpi_double, mpi_sum, 0, mpi_comm_world, error)
 
     call cpu_time(finish)
-    if(finish-start.ge.60.)then
-        print*,floor((finish-start)/60.)+mod(finish-start,60.)/100.
+    if(finish - start >= 60.d0)then
+        print*,floor((finish - start) / 60.d0) + mod(finish - start, 60.d0) / 100.d0
     else
-        print*, 'time taken ~ ',colour(floor(finish-start/60.),red, bold),'s'
+        print*, 'time taken ~ ',colour(floor(finish - start / 60.d0), red, bold),'s'
     end if
 
 
     if(id == 0)then
         print*,'Average # of scatters per photon:',nscattGLOBAL/(nphotons*numproc)
         ! !write out files
-        ! allocate(outer(size(imageb,1), size(imageb,2)))
-        ! outer = cabs(imagebGLOBAL)**2
-        ! open(newunit=u,file=trim(beam)//"-1.dat",access="stream",form="unformatted",status="replace")
-        ! write(u)outer
-        ! close(u)
+        allocate(outer(size(imageb,1), size(imageb,2)))
+        outer = cabs(imagebGLOBAL)**2
+        open(newunit=u,file=trim(beam)//"-1.dat",access="stream",form="unformatted",status="replace")
+        write(u)outer
+        close(u)
 
-        call writer()
+        ! call writer()
         print*,colour('write done',black,white_b,bold)
     end if
 

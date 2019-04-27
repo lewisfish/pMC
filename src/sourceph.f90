@@ -23,6 +23,8 @@ module sourceph_mod
                 call bessel(raxi, dtoskin, iseed)
             elseif(beam == "gaussian")then
                 call gaussian_plano(iseed)
+            elseif(beam == "dslit")then
+                call dslit(iseed)
             end if
 
             xcell = int(nxg * (xp + xmax) / (2. * xmax)) + 1
@@ -32,9 +34,57 @@ module sourceph_mod
         end subroutine sourceph
 
 
+        subroutine dslit(iseed)
+
+            use constants,   only : xmax, ymax, zmax, nzg
+            use photon_vars, only : xp, yp, zp, sint, cost, cosp, sinp, phase, phi, nxp, nyp, nzp
+            use opt_prop,    only : wavelength
+
+            implicit none
+
+            integer, intent(INOUT) :: iseed
+
+            real :: x, y, a, d, ran2, z
+            !need 1025*2 pixels for the following setup
+
+            a = 20.d0 * wavelength ! 2slit width
+            d = 60.d0 * wavelength ! distance between slits, though need 80lambda in theory as I fucked up shit here with sampling
+
+            z = (10000.d0 * wavelength) - zmax ! screen location
+
+            if(ran2(iseed) > 0.5d0)then ! pick slit and sample x, y position
+                x = ranu(d/2.d0,  d/2.d0 + a, iseed)
+                y = ranu(-a*.5d0, a*.5d0, iseed)
+
+            else
+                x = ranu(-d/2.d0,  -d/2.d0 - a, iseed)
+                y = ranu(-a*.5d0, a*.5d0, iseed)
+            end if
+
+            xp = ranu(-xmax, xmax, iseed)
+            yp = ranu(-ymax, ymax, iseed)
+            zp = zmax - (1.e-5*(2.*zmax/nzg))
+
+            phase = sqrt((xp - x)**2 + (yp - y)**2 + (zp - z)**2)
+
+
+            nxp = (xp - x) / phase
+            nyp = (yp - y) / phase
+            nzp = -abs((zp - z) / phase)
+
+            cost = nzp
+            sint = sqrt(1.d0 - cost**2)
+
+            phi  = atan2(nyp, nxp)
+            sinp = sin(phi)
+            cosp = cos(phi)
+
+
+        end subroutine dslit
+
         subroutine bessel(Raxi, d, iseed)
 
-            use constants,   only : nzg, xmax, zmax, ymax,pi, twopi, waist
+            use constants,   only : nzg, xmax, zmax, ymax, twopi, waist
             use opt_prop,    only : n, wavelength
             use photon_vars, only : xp, yp, zp, sint, cost, sinp, cosp, phi, phase, nxp, nyp, nzp, l
 
@@ -391,6 +441,41 @@ module sourceph_mod
             ranu = a + ran2(iseed) * (b - a)
 
         end function ranu
+
+        logical function solveQuadratic(a, b, c, x0, x1)
+        ! solves quadratic equation given coeffs a, b, and c
+        ! returns true if real soln
+        ! returns x0 and x1
+        ! adapted from scratchapixel
+
+            implicit none
+
+            real, intent(IN)  :: a, b, c
+            real, intent(OUT) :: x0, x1
+
+            real :: discrim, q
+
+            solveQuadratic = .false.
+
+            discrim = b**2 - 4.d0 * a * c
+            if(discrim < 0.d0)then
+                return
+            elseif(discrim == 0.d0)then
+                x0 = -0.5*b/a
+                x1 = x0
+            else
+                if(b > 0.d0)then
+                    q = -0.5d0 * (b + sqrt(discrim))
+                else
+                    q = -0.5d0 * (b - sqrt(discrim))
+                end if
+                x0 = q / a
+                x1 = c / q
+            end if
+            solveQuadratic = .true.
+            return
+
+        end function solveQuadratic
 
 
         real function Sellmeier(wave)
