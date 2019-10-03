@@ -25,6 +25,10 @@ module sourceph_mod
                 call gaussian_plano(iseed)
             elseif(beam == "dslit")then
                 call dslit(iseed)
+            elseif(beam == "aperture")then
+                call aperture(iseed)
+            else
+                error stop "Need valid photon source!"
             end if
 
             xcell = int(nxg * (xp + xmax) / (2. * xmax)) + 1
@@ -33,6 +37,47 @@ module sourceph_mod
 
         end subroutine sourceph
 
+
+        subroutine aperture(iseed)
+
+            use constants,   only : xmax, ymax, zmax, nzg
+            use photon_vars, only : xp, yp, zp, sint, cost, cosp, sinp, phase, phi, nxp, nyp, nzp
+            use opt_prop,    only : wavelength
+
+            implicit none
+
+            integer, intent(INOUT) :: iseed
+
+            real :: x, y, z, slitwidth, a, f
+
+            ! aperature width
+            a = 200.d-6
+            slitwidth = a / 2.d0
+            ! Fresnel number
+            F = 4.95d0
+
+            x = ranu(-slitwidth, slitwidth, iseed)
+            y = ranu(-slitwidth, slitwidth, iseed)
+            z = (1.d0/((((F / a)**2) / 2.)*wavelength)) - zmax
+
+            xp = ranu(-xmax, xmax, iseed)
+            yp = ranu(-ymax, ymax, iseed)
+            zp = zmax - (1.e-5*(2.*zmax/nzg))
+
+            phase = sqrt((xp - x)**2 + (yp - y)**2 + (zp - z)**2)
+
+            nxp = (xp - x) / phase
+            nyp = (yp - y) / phase
+            nzp = -abs((zp - z) / phase)
+
+            cost = nzp
+            sint = sqrt(1.d0 - cost**2)
+
+            phi  = atan2(nyp, nxp)
+            sinp = sin(phi)
+            cosp = cos(phi)
+
+        end subroutine aperture
 
         subroutine dslit(iseed)
 
@@ -66,7 +111,6 @@ module sourceph_mod
             zp = zmax - (1.e-5*(2.*zmax/nzg))
 
             phase = sqrt((xp - x)**2 + (yp - y)**2 + (zp - z)**2)
-
 
             nxp = (xp - x) / phase
             nyp = (yp - y) / phase
@@ -200,14 +244,14 @@ module sourceph_mod
             zL = lensThickness
             distLens = (zL - LensI%z) / dirL%z
             if(distLens < 0.d0)then
-                error stop
+                error stop "distance in lens < 0."
             end if
             LensF = LensI + distLens * dirL
 
             !sample on medium surface
             xp = ranu(-xmax, xmax, iseed)
             yp = ranu(-ymax, ymax, iseed)
-            zp = (backfocal + lensThickness) - 1.5*zmax
+            zp = (backfocal + lensThickness) - zmax
             zi = zp
 
             distAir = sqrt((LensF%x - xp)**2 + (LensF%y - yp)**2 + (LensF%z - zp)**2)

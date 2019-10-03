@@ -26,11 +26,11 @@ program mcpolar
     integer :: iseed, xcell, ycell, zcell, holdseed, u, idx, idy
     logical :: tflag, flag
     real    :: nscatt, raxi, dtoskin, binwid, ran2
-    real    :: delta, start, finish, start2, finish2, tmp, phiim, thetaim
+    real    :: delta, start, finish, start2, finish2, tmp
     real, allocatable:: outer(:,:)
 
     !mpi variables
-    integer :: id, error, numproc, i
+    integer :: id, error, numproc
     real    :: nscattGLOBAL
 
     call MPI_init(error)

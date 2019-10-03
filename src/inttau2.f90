@@ -13,8 +13,8 @@ contains
     !
         use constants,   only : xmax, ymax, zmax, fact, energy
         use photon_vars, only : xp, yp, zp, phase
-        use opt_prop, only : kappa
-        use iarray, only : phasor
+        use opt_prop,    only : kappa
+        use iarray,      only : phasor
 
         implicit none
 
