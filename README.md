@@ -3,7 +3,9 @@
 # pMC
 phase Monte Carlo radiation transport
 
-Code underpinning paper: Imaging in thick samples, a phased Monte Carlo radiation transfer algorithm (in review)
+Code underpinning paper: Imaging in thick samples, a phased Monte Carlo radiation transfer algorithm
+[Link to paper](https://doi.org/10.1117/1.JBO.26.9.096004)
+
 Data to accompany paper can be found at http://doi.org/10.5281/zenodo.4782292
 
 MCRT code to track phase of photons. 
